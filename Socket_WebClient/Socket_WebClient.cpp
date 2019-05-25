@@ -7,6 +7,7 @@
 
 /* Khai bao thu vien */
 #include "afxsock.h"
+#include <string>
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -75,11 +76,16 @@ void getWebPageAndSendToClient(CSocket* client_proxy, string host, string query)
 	memset(buffer_rec, 0, sizeof(buffer_rec));
 	/*int htmlstart = 0;
 	char * htmlcontent;*/
-	if ((tmp_res = proxy_web.Receive(buffer_rec, SIZE, 0)) > 0)
+	while ((tmp_res = proxy_web.Receive(buffer_rec, SIZE, 0)) > 0)
 	{
+		cout << "Received from web server: tmp_res = " << tmp_res << " bytes\n";
 		if (buffer_rec) {
 			//fprintf(stdout, buffer_rec);
-			client_proxy->Send(buffer_rec, tmp_res, 0);
+			if (client_proxy->Send(buffer_rec, tmp_res, 0) <= 0)
+			{
+				proxy_web.Close();
+				return;
+			}
 			cout << "Sending to client...: \n\t" << buffer_rec << "\n";
 			memset(buffer_rec, 0, tmp_res);
 		}
