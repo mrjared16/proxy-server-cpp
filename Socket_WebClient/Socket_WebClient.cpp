@@ -52,7 +52,6 @@ void getWebPageAndSendToClient(CSocket* client_proxy, string host, string query)
 		{
 			return;
 		}
-	if ((tmp_res = proxy_web.Receive(buffer_rec, SIZE, 0)) > 0)
 
 		CSocket proxy_web;
 		proxy_web.Create();
