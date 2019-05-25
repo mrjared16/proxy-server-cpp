@@ -6,6 +6,7 @@
 #include "Socket_WebClient.h"
 #include <thread>
 #include <fstream>
+#include <string>
 
 /* Khai bao thu vien */
 #include "afxsock.h"
