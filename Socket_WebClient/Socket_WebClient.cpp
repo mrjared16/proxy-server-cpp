@@ -198,7 +198,7 @@ void getWebPageAndSendToClient(CSocket* client_proxy, string host, string query)
 		memset(buffer_rec, 0, sizeof(buffer_rec));
 		/*int htmlstart = 0;
 		char * htmlcontent;*/
-		timeval timeout = { 1, 0 };
+		timeval timeout = { 6, 0 };
 		fd_set in_set;
 		while (true) {
 			FD_ZERO(&in_set);
