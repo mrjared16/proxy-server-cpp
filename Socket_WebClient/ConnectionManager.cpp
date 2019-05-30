@@ -21,14 +21,14 @@ ProxyServer* ConnectionManager::getProxyServer()
 
 void ConnectionManager::startListenning()
 {
-	thread t(this->listenConnection);
+	thread t(&ConnectionManager::listenConnection, this);
 }
 
 void ConnectionManager::listenConnection()
 {
 	Connection *connection = new Connection(this);
 	// this->online_connections.push_back(connection);
-	thread t(this->listenConnection);
+	thread t(&ConnectionManager::listenConnection, this);
 	connection->startConnecting();
 	delete connection;
 }

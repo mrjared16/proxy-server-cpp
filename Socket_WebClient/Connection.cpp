@@ -3,9 +3,9 @@
 #include "ConnectionManager.h"
 #include "ProxyServer.h"
 
-static const vector<string> support_version = { "HTTP1.0", "HTTP1.1" };
-static const vector<string> support_method = { "GET", "POST" };
-static const vector<string> support_protocol = { "http://" };
+const vector<string> Connection::support_version = { "HTTP1.0", "HTTP1.1" };
+const vector<string> Connection::support_method = { "GET", "POST" };
+const vector<string> Connection::support_protocol = { "http://" };
 
 Connection::Connection(ConnectionManager* connect_mng)
 {
@@ -65,6 +65,7 @@ string Connection::getRequestFromClient()
 	catch (...)
 	{
 		cout << "Having some error (getRequest) \n";
+		return "";
 	}
 }
 
@@ -222,6 +223,6 @@ wchar_t* Connection::convertCharArrayToLPCWSTR(const char* charArray)
 
 bool Connection::sendDeniedResponse(CSocket * client_proxy)
 {
-	string ResForbidden = "HTTP/1.0 403 Forbidden\r\n\Cache-Control: no-cache\r\n\Connection: close\r\n";
+	string ResForbidden = "HTTP/1.0 403 Forbidden\r\nCache-Control: no-cache\r\nConnection: close\r\n";
 	return (client_proxy->Send(ResForbidden.c_str(), ResForbidden.length(), 0) >= 0);
 }
