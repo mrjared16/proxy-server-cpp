@@ -3,7 +3,10 @@
 #include <afxsock.h>
 #include <vector>
 
-#define BUFFER_SIZE 10000
+#define BUFFER_SIZE 1000
+#define TIMEOUT 6
+#define HTTP_PORT 80
+
 using namespace std;
 class ConnectionManager;
 
@@ -27,7 +30,7 @@ private:
 	bool sendRequestToWebServer();
 	bool transferResponseToClient();
 
-	bool sendDeniedResponse(CSocket* client_proxy);
+	bool sendDeniedResponse();
 	wchar_t* convertCharArrayToLPCWSTR(const char* charArray);
 private:
 	CSocket client_proxy, proxy_web;

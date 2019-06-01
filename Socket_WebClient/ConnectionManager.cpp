@@ -2,6 +2,7 @@
 #include "ConnectionManager.h"
 #include "ProxyServer.h"
 #include "Connection.h"
+#include <mutex>
 
 ConnectionManager::ConnectionManager(ProxyServer* proxy)
 {
@@ -10,8 +11,14 @@ ConnectionManager::ConnectionManager(ProxyServer* proxy)
 
 ConnectionManager::~ConnectionManager()
 {
-	for (auto v : this->online_connections)
-		delete v;
+	for (int i = 0; i < online_connections.size(); i++)
+	{
+		online_connections[i]->join();
+	}
+	for (int i = 0; i < online_connections.size(); i++)
+	{
+		delete online_connections[i];
+	}
 }
 
 ProxyServer* ConnectionManager::getProxyServer()
@@ -21,14 +28,21 @@ ProxyServer* ConnectionManager::getProxyServer()
 
 void ConnectionManager::startListenning()
 {
-	thread t(&ConnectionManager::listenConnection, this);
+	this->proxy_server_socket = this->parent->getProxyServerSocket()->Detach();
+	thread *t = new thread(&ConnectionManager::listenConnection, this);
+	//t->detach();
+	online_connections.push_back(t);
 }
 
 void ConnectionManager::listenConnection()
 {
+	this->parent->getProxyServerSocket()->Attach(this->proxy_server_socket);
 	Connection *connection = new Connection(this);
 	// this->online_connections.push_back(connection);
-	thread t(&ConnectionManager::listenConnection, this);
+	this->proxy_server_socket = this->parent->getProxyServerSocket()->Detach();
+	thread *t = new thread(&ConnectionManager::listenConnection, this);
+	//t->detach();
+	online_connections.push_back(t);
 	connection->startConnecting();
 	delete connection;
 }

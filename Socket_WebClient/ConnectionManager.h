@@ -20,9 +20,9 @@ public:
 	ProxyServer* getProxyServer();
 	void startListenning();
 private:
-	vector<Connection*> online_connections;
+	vector<thread *> online_connections;
 	ProxyServer* parent;
-
+	SOCKET proxy_server_socket;
 	void listenConnection();
 };
 

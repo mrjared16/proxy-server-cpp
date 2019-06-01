@@ -4,6 +4,7 @@
 
 #include "stdafx.h"
 #include "Socket_WebClient.h"
+#include "ProxyServer.h"
 #include <thread>
 #include <fstream>
 #include <string>
@@ -20,6 +21,7 @@ using namespace std;
 
 // const
 #define PORT 80
+#define PROXY_PORT 8888
 #define SIZE 1024
 #define TIMEOUT 6 
 
@@ -380,19 +382,22 @@ int main(int argc, char* argv[])
 		{
 			// TODO: code your application's behavior here.
 			/* Ref code:http://coding.debuntu.org/c-linux-socket-programming-tcp-simple-http-client */
-			CSocket proxy_server;
+			//CSocket proxy_server;
 			AfxSocketInit(NULL);
-			proxy_server.Create(8888);
-			proxy_server.Listen();
-			SOCKET* socket = new SOCKET();
-			*socket = proxy_server.Detach();
-			DWORD threadID;
-			// acceptClientRequest(&proxy_server);
-			HANDLE h1 = CreateThread(NULL, 0, acceptClientRequest, socket, 0, &threadID);
-			HANDLE h2 = CreateThread(NULL, 0, runMsg, NULL, 0, &threadID);
+			//proxy_server.Create(8888);
+			//proxy_server.Listen();
+			//SOCKET* socket = new SOCKET();
+			//*socket = proxy_server.Detach();
+			//DWORD threadID;
+			//// acceptClientRequest(&proxy_server);
+			//HANDLE h1 = CreateThread(NULL, 0, acceptClientRequest, socket, 0, &threadID);
+			//HANDLE h2 = CreateThread(NULL, 0, runMsg, NULL, 0, &threadID);
+			//system("pause");
+			//myCache.clear();
+			//proxy_server.Close();
+			ProxyServer proxy_server(PROXY_PORT);
+			proxy_server.run();
 			system("pause");
-			myCache.clear();
-			proxy_server.Close();
 		}
 	}
 	else
