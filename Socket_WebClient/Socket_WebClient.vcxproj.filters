@@ -30,13 +30,13 @@
     <ClInclude Include="Socket_WebClient.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ProxyServer.h">
+    <ClInclude Include="Connection.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ConnectionManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Connection.h">
+    <ClInclude Include="ProxyServer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -47,13 +47,13 @@
     <ClCompile Include="Socket_WebClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ProxyServer.cpp">
+    <ClCompile Include="Connection.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ConnectionManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Connection.cpp">
+    <ClCompile Include="ProxyServer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -61,5 +61,8 @@
     <ResourceCompile Include="Socket_WebClient.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="blacklist.conf" />
   </ItemGroup>
 </Project>

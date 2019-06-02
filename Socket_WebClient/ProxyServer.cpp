@@ -9,7 +9,7 @@ ProxyServer::ProxyServer(int port):
 {
 	// INIT
 	WSADATA init;
-	if (!WSAStartup(0x202, &init)) {
+	if (WSAStartup(0x202, &init) != 0) {
 		cout << "Error WSAStarup" << endl;
 		return;
 	}
