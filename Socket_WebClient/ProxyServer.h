@@ -1,5 +1,5 @@
 #pragma once
-#include <afxsock.h>
+#include "afxsock.h"
 #include <thread>
 #include "ConnectionManager.h"
 
@@ -9,9 +9,9 @@ public:
 	ProxyServer(int port);
 	~ProxyServer();
 	void run();
-	CSocket* getProxyServerSocket();
+	SOCKET getProxyServerSocket();
 private:
 	ConnectionManager connection_manager;
-	CSocket proxy_server;
+	SOCKET proxy_server;
 };
 

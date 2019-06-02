@@ -13,7 +13,7 @@ class ConnectionManager;
 class Connection
 {
 public:
-	Connection(ConnectionManager *);
+	Connection(ConnectionManager*);
 	void startConnecting();
 	~Connection();
 private:
@@ -21,9 +21,9 @@ private:
 
 	string getStandardizeHTTPRequest();
 
-	string getHostnameFromRequest();	
-	
-	char* getIPFromHost(char* hostname);
+	string getHostnameFromRequest();
+
+	sockaddr_in* getWebserverAddress();
 	void requestProcessing();
 	bool isSupport();
 
@@ -31,9 +31,8 @@ private:
 	bool transferResponseToClient();
 
 	bool sendDeniedResponse();
-	wchar_t* convertCharArrayToLPCWSTR(const char* charArray);
 private:
-	CSocket client_proxy, proxy_web;
+	SOCKET client_proxy, proxy_web;
 	string url;
 	string hostname;
 	string request;

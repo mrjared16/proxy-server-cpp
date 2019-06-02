@@ -22,7 +22,6 @@ public:
 private:
 	vector<thread *> online_connections;
 	ProxyServer* parent;
-	SOCKET proxy_server_socket;
 	void listenConnection();
 };
 

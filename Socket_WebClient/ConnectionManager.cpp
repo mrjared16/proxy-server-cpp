@@ -28,20 +28,19 @@ ProxyServer* ConnectionManager::getProxyServer()
 
 void ConnectionManager::startListenning()
 {
-	this->proxy_server_socket = this->parent->getProxyServerSocket()->Detach();
+	// start listen
+	listen(this->getProxyServer()->getProxyServerSocket(), 5);
+
+	// start thread to listen socket
 	thread *t = new thread(&ConnectionManager::listenConnection, this);
-	//t->detach();
+
 	online_connections.push_back(t);
 }
 
 void ConnectionManager::listenConnection()
 {
-	this->parent->getProxyServerSocket()->Attach(this->proxy_server_socket);
 	Connection *connection = new Connection(this);
-	// this->online_connections.push_back(connection);
-	this->proxy_server_socket = this->parent->getProxyServerSocket()->Detach();
 	thread *t = new thread(&ConnectionManager::listenConnection, this);
-	//t->detach();
 	online_connections.push_back(t);
 	connection->startConnecting();
 	delete connection;

@@ -9,10 +9,14 @@ const vector<string> Connection::support_protocol = { "http://" };
 
 Connection::Connection(ConnectionManager* connect_mng)
 {
-	ProxyServer* proxy_server = connect_mng->getProxyServer();
-	CSocket* proxy_server_socket = proxy_server->getProxyServerSocket();
-	proxy_server_socket->Accept(this->client_proxy);
+	// ProxyServer* proxy_server = connect_mng->getProxyServer();
+	// CSocket* proxy_server_socket = proxy_server->getProxyServerSocket();
+	// proxy_server_socket->Accept(this->client_proxy);
 	//connect_mng->getProxyServer()->getProxyServerSocket()->Accept(this->client_proxy);
+
+	sockaddr_in client_address;
+	int size = sizeof(client_address);
+	client_proxy = accept(connect_mng->getProxyServer()->getProxyServerSocket(), (sockaddr*)& client_address, &size);
 }
 
 void Connection::startConnecting()
@@ -27,35 +31,30 @@ void Connection::startConnecting()
 			return;
 		}
 
-
-		// OPEN CONNECT TO WEB SERVER 
-		this->proxy_web.Create();
-
-
-
 		// Get hostname
 		this->requestProcessing();
 
+		// OPEN CONNECT TO WEB SERVER 
+		this->proxy_web = socket(AF_INET, SOCK_STREAM, 0);
 
 		// Send standardize request to web server
 		// Fail to send
 		if (!this->sendRequestToWebServer())
 		{
-			this->proxy_web.Close();
+			closesocket(this->proxy_web);
 			return;
 		}
 
 		// Receive data from web server and send to client
 		if (!this->transferResponseToClient())
 		{
-			this->proxy_web.Close();
+			closesocket(this->proxy_web);
 			return;
 		}
 
 
-
 		// CLOSE CONNECT TO WEB SERVER
-		this->proxy_web.Close();
+		closesocket(this->proxy_web);
 	}
 	catch (...)
 	{
@@ -65,7 +64,7 @@ void Connection::startConnecting()
 
 Connection::~Connection()
 {
-	this->client_proxy.Close();
+	closesocket(this->client_proxy);
 }
 
 string Connection::getRequestFromClient()
@@ -75,7 +74,7 @@ string Connection::getRequestFromClient()
 		string result;
 		char buffer[BUFFER_SIZE + 1] = { 0 };
 		int response_size = 0;
-		if ((response_size = client_proxy.Receive(buffer, BUFFER_SIZE, 0)) > 0)
+		if ((response_size = recv(this->client_proxy, buffer, BUFFER_SIZE, 0)) > 0)
 		{
 			cout << "Receive from browser: response_size = " << response_size << " bytes\n";
 			if (buffer != "") {
@@ -158,38 +157,27 @@ bool Connection::sendRequestToWebServer()
 {
 	// 2. SEND REQUEST
 
-		// 2.1. GET IP AND CONNECT TO WEB SERVER
+		// 2.1. GET WEB SERVER ADDRESS
 
-			// 2.1.1. GET IP
+	sockaddr_in *web_address = this->getWebserverAddress();
 
-	// Get host ip
-	char* c_char_hostname = strdup(hostname.c_str());
-	char* ip = getIPFromHost(c_char_hostname);
-	free(c_char_hostname);
-
-	if (ip == NULL)
-		return false;
-
-	// 2.1.2. CONNECT TO WEB SERVER
-
-
-// connect to web server
-	cout << "\nConnecting to " << ip << " ...\n";
-	wchar_t* ip_wstr = convertCharArrayToLPCWSTR(ip);
-
-	if (proxy_web.Connect(ip_wstr, HTTP_PORT) < 0)
+	if (web_address == NULL)
 	{
-		cout << "Could not connect to host ip!!!\n";
-		delete[] ip_wstr;
 		return false;
 	}
 
+		// 2.2. CONNECT TO WEB SERVER
+
+	if (connect(this->proxy_web, (sockaddr *) web_address, sizeof(*web_address)) < 0)
+	{
+		cout << "Could not connect to host!!!\n";
+		return false;
+	}
+
+	delete web_address;
 	cout << "Connected!\n";
-	delete[] ip;
-	delete[] ip_wstr;
 
-
-	// 2.2. SEND REQUEST TO WEB SERVER
+		// 2.3. SEND REQUEST TO WEB SERVER
 
 	int send_response = 0;
 
@@ -203,7 +191,7 @@ bool Connection::sendRequestToWebServer()
 	while (sent < request_header_length)
 	{
 		cout << "Sending request_header...\n";
-		send_response = proxy_web.Send(request_header.substr(sent).c_str(), request_header_length - sent, 0);
+		send_response = send(this->proxy_web, request_header.substr(sent).c_str(), request_header_length - sent, 0);
 
 		cout << "Send to web server: send_response = " << send_response << " bytes\n";
 
@@ -252,7 +240,7 @@ bool Connection::transferResponseToClient()
 		if (FD_ISSET(this->proxy_web, &in_set))
 		{
 			// receive from web server
-			receive_response = this->proxy_web.Receive(receive_buffer, BUFFER_SIZE, 0);
+			receive_response = recv(this->proxy_web, receive_buffer, BUFFER_SIZE, 0);
 
 			// error when receive or done
 			if (receive_response < 0)
@@ -271,7 +259,7 @@ bool Connection::transferResponseToClient()
 			// send to client
 
 			// TODO: create thread for send and insert to cache
-			send_response = this->client_proxy.Send(receive_buffer, receive_response, 0);
+			send_response = send(this->client_proxy, receive_buffer, receive_response, 0);
 
 			// send error: client side
 			if (send_response < 0)
@@ -297,42 +285,25 @@ bool Connection::transferResponseToClient()
 	return true;
 }
 
-char* Connection::getIPFromHost(char* hostname)
+sockaddr_in* Connection::getWebserverAddress()
 {
 	struct hostent* hent;
-	if ((hent = gethostbyname(hostname)) == NULL)
+	if ((hent = gethostbyname(hostname.c_str())) == NULL)
 	{
 		cout << "Can't get IP\n";
 		return NULL;
 	}
 
-	int iplen = 15; //XXX.XXX.XXX.XXX
-	char* ip = new char[iplen + 1];
-	memset(ip, 0, iplen + 1);
+	sockaddr_in* result = new sockaddr_in;
+	result->sin_family = AF_INET;
+	memcpy(&result->sin_addr, hent->h_addr, hent->h_length);
+	result->sin_port = htons(HTTP_PORT);
 
-	if (inet_ntop(AF_INET, (void*)hent->h_addr_list[0], ip, iplen) == NULL)
-	{
-		cout << "Can't resolve host\n";
-		delete[] ip;
-		return NULL;
-	}
-	return ip;
+	return result;
 }
-
-
-//Ref: http://stackoverflow.com/questions/19715144/how-to-convert-char-to-lpcwstr
-wchar_t* Connection::convertCharArrayToLPCWSTR(const char* charArray)
-{
-	wchar_t* wString = new wchar_t[4096];
-	MultiByteToWideChar(CP_ACP, 0, charArray, -1, wString, 4096);
-	return wString;
-}
-
-
-
 
 bool Connection::sendDeniedResponse()
 {
 	string ResForbidden = "HTTP/1.0 403 Forbidden\r\nCache-Control: no-cache\r\nConnection: close\r\n";
-	return (this->client_proxy.Send(ResForbidden.c_str(), ResForbidden.length(), 0) >= 0);
+	return (send(this->client_proxy, ResForbidden.c_str(), ResForbidden.length(), 0) >= 0);
 }

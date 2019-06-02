@@ -12,7 +12,7 @@
 #include <algorithm>
 #include <map> /* cache */
 
-#include "afxsock.h"
+// #include "afxsock.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -383,7 +383,7 @@ int main(int argc, char* argv[])
 			// TODO: code your application's behavior here.
 			/* Ref code:http://coding.debuntu.org/c-linux-socket-programming-tcp-simple-http-client */
 			//CSocket proxy_server;
-			AfxSocketInit(NULL);
+			//AfxSocketInit(NULL);
 			//proxy_server.Create(8888);
 			//proxy_server.Listen();
 			//SOCKET* socket = new SOCKET();
