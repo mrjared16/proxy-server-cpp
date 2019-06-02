@@ -21,6 +21,10 @@ Connection::Connection(ConnectionManager* connect_mng)
 
 void Connection::startConnecting()
 {
+	if (client_proxy == INVALID_SOCKET) {
+		cout << "Error accept" << endl;
+		return;
+	}
 	try {
 		this->request = this->getRequestFromClient();
 
@@ -36,6 +40,10 @@ void Connection::startConnecting()
 
 		// OPEN CONNECT TO WEB SERVER 
 		this->proxy_web = socket(AF_INET, SOCK_STREAM, 0);
+		if (this->proxy_web == INVALID_SOCKET) {
+			cout << "Error socket proxy web" << endl;
+			return;
+		}
 
 		// Send standardize request to web server
 		// Fail to send

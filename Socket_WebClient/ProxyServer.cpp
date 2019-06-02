@@ -9,7 +9,11 @@ ProxyServer::ProxyServer(int port):
 {
 	// INIT
 	WSADATA init;
-	WSAStartup(0x202, &init);
+	if (!WSAStartup(0x202, &init)) {
+		cout << "Error WSAStarup" << endl;
+		return;
+	}
+
 
 	// init socket address
 	sockaddr_in proxy_address;
@@ -19,6 +23,10 @@ ProxyServer::ProxyServer(int port):
 
 	// init socket
 	this->proxy_server = socket(AF_INET, SOCK_STREAM, 0);
+	if (this->proxy_server == INVALID_SOCKET) {
+		cout << "Error socket" << endl;
+		return;
+	}
 
 	// bind sokcet
 	bind(this->proxy_server, (sockaddr*)& proxy_address, sizeof(proxy_address));

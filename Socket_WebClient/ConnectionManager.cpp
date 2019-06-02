@@ -29,7 +29,10 @@ ProxyServer* ConnectionManager::getProxyServer()
 void ConnectionManager::startListenning()
 {
 	// start listen
-	listen(this->getProxyServer()->getProxyServerSocket(), 5);
+	if (listen(this->getProxyServer()->getProxyServerSocket(), 5) < 0) {
+		cout << "Error listen" << endl;
+		return;
+	}
 
 	// start thread to listen socket
 	thread *t = new thread(&ConnectionManager::listenConnection, this);
