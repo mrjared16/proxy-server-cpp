@@ -4,145 +4,365 @@
 
 #include "stdafx.h"
 #include "Socket_WebClient.h"
+#include "ProxyServer.h"
+#include <thread>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <map> /* cache */
 
-/* Khai bao thu vien */
-#include "afxsock.h"
+// #include "afxsock.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
-
-/* Declare function */
-void sendDeniedResponse(CSocket* client_proxy);
-int create_tcp_socket();
-char* get_ip(char* host);
-wchar_t* convertCharArrayToLPCWSTR(const char* charArray);
-char* build_get_query(char* host, char* page);
-int main(int argc, char* argv[]);
-void usage();
-
-#define HOST "www.fit.hcmus.edu.vn"
-#define PAGE "/"
-#define PORT 80
-#define USERAGENT "HTMLGET 1.0"
-#define SIZE 10000
-// The one and only application object
-
-
-CWinApp theApp;
-
 using namespace std;
 
+// const
+#define PORT 80
+#define PROXY_PORT 8888
+#define SIZE 1024
+#define TIMEOUT 6 
 
-void getWebPageAndSendToClient(CSocket* client_proxy, string host, string query)
+
+// GLOBAL FUNCTION
+CWinApp theApp;
+int thread_counter = 0;
+map<string, vector<char>> myCache;
+
+// PROTOTYPE
+
+DWORD WINAPI  acceptClientRequest(LPVOID arg);
+DWORD WINAPI  runMsg(LPVOID arg);
+
+// get
+bool getHostName(string query, string& host);
+
+char* get_ip(char* host);
+wchar_t* convertCharArrayToLPCWSTR(const char* charArray);
+
+string getURL(string query, string protocol);
+string standardizeRequest(string query);
+
+// check
+bool isServerNameInBlacklist(string server_name);
+vector<char> getResponseFromCache(string url);
+
+// cache
+void saveToCache(string url, vector<char> response);
+void getWebPageAndSendToClient(CSocket* client_proxy, string host, string request);
+
+
+// void
+string getRequest(CSocket* client_proxy);
+
+void LoadBlackList(vector<string>& arr);
+bool sendDeniedResponse(CSocket* client_proxy);
+
+
+
+
+// cache
+
+vector<char> getResponseFromCache(string url) {
+	return myCache[url];
+}
+
+void saveToCache(string url, vector<char> response) {
+	myCache[url] = response;
+}
+
+// other function
+void LoadBlackList(vector<string>& arr)
 {
-	CSocket proxy_web;
-	proxy_web.Create();
-
-	//Buoc 3: Ket noi toi Server
-	char* tmp = strdup(host.c_str());
-	char* ip = get_ip(tmp);
-	//fprintf(stderr, "IP is %s\n", ip);
-	if (ip == NULL)
-	{
-		return;
+	fstream file;
+	file.open("blacklist.conf", ios::in);
+	if (file.is_open()) {
+		while (!file.eof()) {
+			string temp;
+			getline(file, temp);
+			if (temp.back() == '\n') {
+				temp.pop_back();
+			}
+			arr.push_back(temp);
+		}
 	}
-	cout << "connecting to " << ip << " ...\n";
-	if (proxy_web.Connect(convertCharArrayToLPCWSTR(ip), PORT) < 0)
-	{
-		cout << "Could not connect";
-		return;
-	}
-	cout << "Connected!\n";
-	//fprintf(stderr, "Query is:\n<<START>>\n%s<<END>>\n", query);
+}
 
-	//Send the query to the server
-	int sent = 0;
-	int tmp_res = 0;
-	while (sent < query.length())
+// transfer data
+bool sendDeniedResponse(CSocket * client_proxy)
+{
+	string ResForbidden = "HTTP/1.0 403 Forbidden\r\nCache-Control: no-cache\r\nConnection: close\r\n";
+	return (client_proxy->Send(ResForbidden.c_str(), ResForbidden.length(), 0) >= 0);
+}
+
+string getRequest(CSocket * client_proxy)
+{
+	try
 	{
-		cout << "Sending query...\n";
-		tmp_res = proxy_web.Send(query.substr(sent).c_str(), query.length() - sent, 0);
-		if (tmp_res == -1) {
-			cout << "Can't send query";
+		string result;
+		char buffer_rec[SIZE + 1] = { 0 };
+		int receive_response = 0;
+
+		
+		if ((receive_response = client_proxy->Receive(buffer_rec, SIZE, 0)) > 0)
+		{
+			cout << "Receive from browser: receive_response = " << receive_response << " bytes\n";
+			result += buffer_rec;
+			//memset(buffer_rec, 0, receive_response);
+		}
+		else if (receive_response < 0)
+		{
+			cout << "Cant receive from browser\n";
+			return "";
+		}
+		cout << "\nRequest: \n\t" << result << "\n";
+		return result;
+	}
+	catch (...)
+	{
+		cout << "Having some error (getRequest) \n";
+		return "";
+	}
+}
+
+void getWebPageAndSendToClient(CSocket * client_proxy, string host, string request)
+{
+	try {
+		int receive_response = 0, send_response = 0;
+
+
+		// 1. CHECK IN CACHE
+
+		//Kiem tra xem da co response tu server gui ve lan nao chua? Neu co thi lay response ra tu cache va proxy gui ve cho client
+		//con neu khong thi proxy gui request len server de lay response ve
+		vector<char> cache = getResponseFromCache(getURL(request, "http://"));
+
+		int cache_size = cache.size();
+
+		if (cache_size > 0) {
+			char* buffer = new char[cache_size];
+			copy(cache.begin(), cache.end(), buffer);
+
+			int sent = 0;
+			while (sent < cache_size)
+			{
+				send_response = client_proxy->Send(buffer + sent, cache_size, 0);
+				if (send_response <= 0)
+					break;
+				sent += send_response;
+			}
+
+			delete[] buffer;
 			return;
 		}
-		sent += tmp_res;
-	}
-	cout << "Start receive data...\n";
-	//now it is time to receive the page
-	char buffer_rec[SIZE + 1];
-	memset(buffer_rec, 0, sizeof(buffer_rec));
-	/*int htmlstart = 0;
-	char * htmlcontent;*/
-	if ((tmp_res = proxy_web.Receive(buffer_rec, SIZE, 0)) > 0)
-	{
-		if (buffer_rec) {
-			//fprintf(stdout, buffer_rec);
-			client_proxy->Send(buffer_rec, tmp_res, 0);
-			cout << "Sending to client...: \n\t" << buffer_rec << "\n";
-			memset(buffer_rec, 0, tmp_res);
+
+		// 2. SEND REQUEST
+
+
+			// 2.1. GET IP AND CONNECT TO WEB SERVER
+
+				// 2.1.1. GET IP
+
+		char* tmp = strdup(host.c_str());
+		char* ip = get_ip(tmp);
+		delete tmp;
+		if (ip == NULL)
+		{
+			return;
 		}
-	}
-	if (tmp_res < 0)
-	{
-		cout << "Error receiving data";
-	}
-	//free(get);
-	//free(ip);
-	proxy_web.Close();
-}
 
 
-string getRequest(CSocket* client_proxy)
-{
-	string result;
-	char buffer_rec[SIZE + 1] = { 0 };
-	int tmp_res = 0;
-	if/*while*/ ((tmp_res = client_proxy->Receive(buffer_rec, SIZE, 0)) > 0)
-	{
-		if (tmp_res > 0) {
-			result += buffer_rec;
+		// 2.1.2. CONNECT TO WEB SERVER
+
+		CSocket proxy_web;
+		proxy_web.Create();
+
+		cout << "connecting to " << ip << " ...\n";
+		if (proxy_web.Connect(convertCharArrayToLPCWSTR(ip), PORT) < 0)
+		{
+			cout << "Could not connect";
+			proxy_web.Close();
+			return;
 		}
-		memset(buffer_rec, 0, tmp_res);
-	}
-	cout << "Request: \n\t" << result << "\n";
-	return result;
-}
 
-bool getHostName(string& query, string& host)
-{
-	//GET http://www.abc.com/abc/ HTTP1.0 => GET /abc HTTP/1.0
-	//method|| protocal+host+page|| protocol
-	string protocol = "http://";
-	string url, page, method;
-	if (query.find("GET") == -1 || query.find(protocol) == -1)
+		cout << "Connected!\n";
+		delete[] ip;
+
+		// 2.2. SEND REQUEST TO WEB SERVER
+
+		// replace url by page
+		string request_header = standardizeRequest(request);
+
+		int sent = 0;
+		int request_header_length = request_header.length();
+
+		//Send the request_header to the server
+		while (sent < request_header_length)
+		{
+			cout << "Sending request_header...\n";
+			send_response = proxy_web.Send(request_header.substr(sent).c_str(), request_header_length - sent, 0);
+
+			cout << "Send to web server: send_response = " << send_response << " bytes\n";
+
+			// send error
+			if (send_response < 0) {
+				cout << "Can't send request";
+				proxy_web.Close();
+				return;
+			}
+
+			// send done
+			if (send_response == 0)
+			{
+				break;
+			}
+
+			sent += send_response;
+		}
+
+
+		// 3. RECEIVE AND SEND DATA TO CLIENT
+
+		cout << "Start receive data...\n";
+
+		char receive_buffer[SIZE + 1];
+		memset(receive_buffer, 0, sizeof(receive_buffer));
+
+		// timeout when receive from web server
+		timeval timeout_webserver = { TIMEOUT, 0 };
+
+		// timeout when send to client
+		timeval timeout_client = { TIMEOUT, 0 };
+
+		fd_set in_set;
+
+		while (true) {
+			FD_ZERO(&in_set);
+			FD_SET(proxy_web, &in_set);
+
+			// set timeout
+			int cnt = select(proxy_web + 1, &in_set, NULL, NULL, &timeout_webserver);
+
+			if (FD_ISSET(proxy_web, &in_set))
+			{
+				// receive from web server
+				receive_response = proxy_web.Receive(receive_buffer, SIZE, 0);
+
+				// error when receive or done
+				if (receive_response <= 0)
+					break;
+
+				cout << "Received from web server: receive_response = " << receive_response << " bytes\n";
+
+				cout << "Sending to client...: \n\t" << receive_buffer << "\n";
+
+				// send to client
+
+				// TODO: create thread for send and insert to cache
+				int send_res = client_proxy->Send(receive_buffer, receive_response, 0);
+
+				// send error: client side
+				if (send_res <= 0)
+					break;
+
+				// add to cache
+				cache.insert(cache.end(), receive_buffer, receive_buffer + receive_response);
+
+				// clear buffer
+				memset(receive_buffer, 0, receive_response);
+			}
+			else {
+				saveToCache(getURL(request, "http://"), cache);
+				break;
+
+			}
+		}
+		proxy_web.Close();
+	}
+	catch (...)
 	{
-		cout << "Chuong trinh khong ho tro method hay protocol nay!\n";
-		return false;
+		cout << "Having some error (getWebPageAndSendToClient)\n";
 	}
-	url = query.substr(query.find(protocol), query.find("HTTP/") - 2 - query.find(protocol));
-	//url = http://www.abc.com/abc/
-	host = url.substr(protocol.length(), url.find('/', protocol.length() + 1) - protocol.length());
-	page = url.substr(url.find(host) + host.length(), url.length() - url.find(host) - host.length() + 1);
-	cout << "url: " << url << endl;
-	cout << "host: " << host << endl;
-	cout << "page: " << page << endl;
-	// replace url by page
-	query.replace(query.find(protocol), url.length(), page);
-	cout << "standardize request: " << query << endl;
-	return true;
 }
 
-//Ref: http://stackoverflow.com/questions/19715144/how-to-convert-char-to-lpcwstr
-wchar_t* convertCharArrayToLPCWSTR(const char* charArray)
+
+// thread
+DWORD WINAPI  acceptClientRequest(LPVOID arg) // TODO: convert to CWinThread/ std::thread
 {
-	wchar_t* wString = new wchar_t[4096];
-	MultiByteToWideChar(CP_ACP, 0, charArray, -1, wString, 4096);
-	return wString;
+	try {
+		SOCKET* socket = (SOCKET*)arg;
+		
+		CSocket proxy_server;
+		if (proxy_server.Attach(*socket) == 0)
+		{
+			return 0;
+		}
+
+		CSocket client_proxy;
+		proxy_server.Accept(client_proxy);
+		
+		cout << "**********************************************************";
+		cout << "\nGot connect!\n";
+		cout << "**********************************************************\n";
+		
+		thread_counter++;
+		
+		if ((*socket = proxy_server.Detach()) == 0)
+		{
+			return 0;
+		}
+
+		// start new thread to accept
+		DWORD next_ThreadID;
+		HANDLE h = CreateThread(NULL, 0, acceptClientRequest, socket, 0, &next_ThreadID);
+		
+		
+		// this thread use to connect to client
+		string request_from_client = getRequest(&client_proxy);
+		
+		string hostname;
+		
+		// get hostname and check if method/ protocol is support
+		// and check if hostname is in blacklist
+		if (!getHostName(request_from_client, hostname) || isServerNameInBlacklist(hostname))
+		{
+			sendDeniedResponse(&client_proxy);
+		}
+
+		else
+		{
+			// nhan du lieu tu web gui cho client
+			getWebPageAndSendToClient(&client_proxy, hostname, request_from_client);
+		}
+
+		// done, close connect
+		client_proxy.Close();
+		
+		thread_counter--;
+		return 0;
+	}
+	catch (...)
+	{
+		cout << "Having some error (accept)!\n";
+		return 0;
+	}
 }
+
+DWORD __stdcall runMsg(LPVOID arg)
+{
+	while (1)
+	{
+		Sleep(3000);
+		cout << "So thread dang ket noi: " << thread_counter << "\n";
+	}
+	return 0;
+}
+
 
 /* Ref code:http://coding.debuntu.org/c-linux-socket-programming-tcp-simple-http-client */
+
 int main(int argc, char* argv[])
 {
 	int nRetCode = 0;
@@ -162,33 +382,22 @@ int main(int argc, char* argv[])
 		{
 			// TODO: code your application's behavior here.
 			/* Ref code:http://coding.debuntu.org/c-linux-socket-programming-tcp-simple-http-client */
-			CSocket proxy_server, * client_proxy;
-			AfxSocketInit(NULL);
-			proxy_server.Create(8888);
-			proxy_server.Listen();
-			while (1)
-			{
-				client_proxy = new CSocket();
-				proxy_server.Accept(*client_proxy);
-				// nhan request tu client
-				string query = getRequest(client_proxy);
-				//const char* query_ch = query.c_str();
-				// lay hostname tu request
-				string host_name;
-				if (!getHostName(query, host_name))
-				{
-
-					sendDeniedResponse(client_proxy);
-				}
-				// nhan du lieu tu web gui cho client
-				else
-				{
-					getWebPageAndSendToClient(client_proxy, host_name, query);
-				}
-				client_proxy->Close();
-				delete client_proxy;
-			}
-
+			//CSocket proxy_server;
+			//AfxSocketInit(NULL);
+			//proxy_server.Create(8888);
+			//proxy_server.Listen();
+			//SOCKET* socket = new SOCKET();
+			//*socket = proxy_server.Detach();
+			//DWORD threadID;
+			//// acceptClientRequest(&proxy_server);
+			//HANDLE h1 = CreateThread(NULL, 0, acceptClientRequest, socket, 0, &threadID);
+			//HANDLE h2 = CreateThread(NULL, 0, runMsg, NULL, 0, &threadID);
+			//system("pause");
+			//myCache.clear();
+			//proxy_server.Close();
+			ProxyServer proxy_server(PROXY_PORT);
+			proxy_server.run();
+			system("pause");
 		}
 	}
 	else
@@ -198,24 +407,20 @@ int main(int argc, char* argv[])
 		nRetCode = 1;
 	}
 
+	system("pause");
 	return nRetCode;
 }
 
-void usage()
-{
-	//fprintf(stderr, "USAGE: htmlget host [page]\n\
-		\thost: the website hostname. ex: coding.debuntu.org\n\
-		\tpage: the page to retrieve. ex: index.html, default: /\n");
-}
 
-/*
-Get ip from domain name
-*/
+
+
+
+
 char* get_ip(char* host)
 {
 	struct hostent* hent;
 	int iplen = 15; //XXX.XXX.XXX.XXX
-	char* ip = (char*)malloc(iplen + 1);
+	char* ip = new char[iplen + 1];
 	memset(ip, 0, iplen + 1);
 	if ((hent = gethostbyname(host)) == NULL)
 	{
@@ -230,8 +435,66 @@ char* get_ip(char* host)
 	return ip;
 }
 
-void sendDeniedResponse(CSocket* client_proxy)
+wchar_t* convertCharArrayToLPCWSTR(const char* charArray)
 {
-	string ResForbidden = "HTTP/1.0 403 Forbidden\r\n\Cache-Control: no-cache\r\n\Connection: close\r\n";
-	client_proxy->Send(ResForbidden.c_str(), ResForbidden.length(), 0);
+	wchar_t* wString = new wchar_t[4096];
+	MultiByteToWideChar(CP_ACP, 0, charArray, -1, wString, 4096);
+	return wString;
+}
+
+
+
+bool isServerNameInBlacklist(string hostname) {
+	vector<string> blacklist;
+
+	LoadBlackList(blacklist);
+
+	if (blacklist.size() == 0) {
+		cout << "Khong load duoc file blacklist" << endl;
+		return false;
+	}
+
+	for (int i = 0, size = blacklist.size(); i < size; i++) {
+		// found in blacklist
+		if (blacklist[i].find(hostname) != -1) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool getHostName(string query, string & host)
+{
+	//GET http://www.abc.com/abc/ HTTP1.0 => GET /abc HTTP/1.0
+	//method|| protocal+host+page|| protocol
+	string protocol = "http://";
+	string url, page, method;
+	if ((query.find("GET") == -1 && query.find("POST") == -1) || query.find(protocol) == -1)
+	{
+		cout << "Chuong trinh khong ho tro method hay protocol nay!\n";
+		return false;
+	}
+	url = getURL(query, protocol);
+	//url = http://www.abc.com/abc/
+	host = url.substr(protocol.length(), url.find('/', protocol.length() + 1) - protocol.length());
+	// cout << "url: " << url << endl;
+	// cout << "host: " << host << endl;
+	// cout << "page: " << page << endl;
+	return true;
+}
+
+string getURL(string query, string protocol) {
+	return query.substr(query.find(protocol), query.find("HTTP/") - 2 - query.find(protocol));
+}
+
+string standardizeRequest(string query) {
+	string url, host, page;
+	url = getURL(query, "http://");
+	getHostName(query, host);
+	page = url.substr(url.find(host) + host.length(), url.length() - url.find(host) - host.length() + 1);
+	// replace url by page
+	query.replace(query.find("http://"), url.length(), page);
+	// cout << "standardize request: " << query << endl;
+	return query;
 }
