@@ -29,8 +29,7 @@ ProxyServer::ProxyServer(int port):
 	}
 
 	// bind sokcet
-	bind(this->proxy_server, (sockaddr*)& proxy_address, sizeof(proxy_address));
-
+	int c = ::bind(this->proxy_server, (sockaddr*)& proxy_address, sizeof(proxy_address));
 }
 
 ProxyServer::~ProxyServer()
