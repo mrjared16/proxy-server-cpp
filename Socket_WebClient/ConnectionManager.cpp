@@ -29,7 +29,7 @@ ProxyServer* ConnectionManager::getProxyServer()
 void ConnectionManager::startListenning()
 {
 	// start listen
-	if (listen(this->getProxyServer()->getProxyServerSocket(), 5) < 0) {
+	if (::listen(this->getProxyServer()->getProxyServerSocket(), 5) < 0) {
 		cout << "Error listen" << endl;
 		return;
 	}

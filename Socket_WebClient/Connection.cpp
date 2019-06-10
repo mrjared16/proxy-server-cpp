@@ -16,7 +16,7 @@ Connection::Connection(ConnectionManager* connect_mng)
 
 	sockaddr_in client_address;
 	int size = sizeof(client_address);
-	client_proxy = accept(connect_mng->getProxyServer()->getProxyServerSocket(), (sockaddr*)& client_address, &size);
+	client_proxy = ::accept(connect_mng->getProxyServer()->getProxyServerSocket(), (sockaddr*)& client_address, &size);
 }
 
 void Connection::startConnecting()
@@ -39,7 +39,7 @@ void Connection::startConnecting()
 		this->requestProcessing();
 
 		// OPEN CONNECT TO WEB SERVER 
-		this->proxy_web = socket(AF_INET, SOCK_STREAM, 0);
+		this->proxy_web = ::socket(AF_INET, SOCK_STREAM, 0);
 		if (this->proxy_web == INVALID_SOCKET) {
 			cout << "Error socket proxy web" << endl;
 			return;
@@ -49,20 +49,20 @@ void Connection::startConnecting()
 		// Fail to send
 		if (!this->sendRequestToWebServer())
 		{
-			closesocket(this->proxy_web);
+			::closesocket(this->proxy_web);
 			return;
 		}
 
 		// Receive data from web server and send to client
 		if (!this->transferResponseToClient())
 		{
-			closesocket(this->proxy_web);
+			::closesocket(this->proxy_web);
 			return;
 		}
 
 
 		// CLOSE CONNECT TO WEB SERVER
-		closesocket(this->proxy_web);
+		::closesocket(this->proxy_web);
 	}
 	catch (...)
 	{
@@ -72,7 +72,7 @@ void Connection::startConnecting()
 
 Connection::~Connection()
 {
-	closesocket(this->client_proxy);
+	::closesocket(this->client_proxy);
 }
 
 string Connection::getRequestFromClient()
@@ -82,7 +82,7 @@ string Connection::getRequestFromClient()
 		string result;
 		char buffer[BUFFER_SIZE + 1] = { 0 };
 		int response_size = 0;
-		if ((response_size = recv(this->client_proxy, buffer, BUFFER_SIZE, 0)) > 0)
+		if ((response_size = ::recv(this->client_proxy, buffer, BUFFER_SIZE, 0)) > 0)
 		{
 			cout << "Receive from browser: response_size = " << response_size << " bytes\n";
 			if (buffer != "") {
@@ -199,7 +199,7 @@ bool Connection::sendRequestToWebServer()
 	while (sent < request_header_length)
 	{
 		cout << "Sending request_header...\n";
-		send_response = send(this->proxy_web, request_header.substr(sent).c_str(), request_header_length - sent, 0);
+		send_response = ::send(this->proxy_web, request_header.substr(sent).c_str(), request_header_length - sent, 0);
 
 		cout << "Send to web server: send_response = " << send_response << " bytes\n";
 
@@ -248,7 +248,7 @@ bool Connection::transferResponseToClient()
 		if (FD_ISSET(this->proxy_web, &in_set))
 		{
 			// receive from web server
-			receive_response = recv(this->proxy_web, receive_buffer, BUFFER_SIZE, 0);
+			receive_response = ::recv(this->proxy_web, receive_buffer, BUFFER_SIZE, 0);
 
 			// error when receive or done
 			if (receive_response < 0)
@@ -267,7 +267,7 @@ bool Connection::transferResponseToClient()
 			// send to client
 
 			// TODO: create thread for send and insert to cache
-			send_response = send(this->client_proxy, receive_buffer, receive_response, 0);
+			send_response = ::send(this->client_proxy, receive_buffer, receive_response, 0);
 
 			// send error: client side
 			if (send_response < 0)
@@ -313,5 +313,5 @@ sockaddr_in* Connection::getWebserverAddress()
 bool Connection::sendDeniedResponse()
 {
 	string ResForbidden = "HTTP/1.0 403 Forbidden\r\nCache-Control: no-cache\r\nConnection: close\r\n";
-	return (send(this->client_proxy, ResForbidden.c_str(), ResForbidden.length(), 0) >= 0);
+	return (::send(this->client_proxy, ResForbidden.c_str(), ResForbidden.length(), 0) >= 0);
 }

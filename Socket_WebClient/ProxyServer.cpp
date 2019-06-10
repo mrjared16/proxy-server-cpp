@@ -22,21 +22,21 @@ ProxyServer::ProxyServer(int port):
 	proxy_address.sin_port = htons(port);
 
 	// init socket
-	this->proxy_server = socket(AF_INET, SOCK_STREAM, 0);
+	this->proxy_server = ::socket(AF_INET, SOCK_STREAM, 0);
 	if (this->proxy_server == INVALID_SOCKET) {
 		cout << "Error socket" << endl;
 		return;
 	}
 
 	// bind sokcet
-	bind(this->proxy_server, (sockaddr*)& proxy_address, sizeof(proxy_address));
+	::bind(this->proxy_server, (sockaddr*)& proxy_address, sizeof(proxy_address));
 
 }
 
 ProxyServer::~ProxyServer()
 {
 	// this->proxy_server.Close();
-	closesocket(this->proxy_server);
+	::closesocket(this->proxy_server);
 }
 
 void ProxyServer::run()
