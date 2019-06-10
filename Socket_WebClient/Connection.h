@@ -3,7 +3,7 @@
 #include <afxsock.h>
 #include <vector>
 
-#define BUFFER_SIZE 100000
+#define BUFFER_SIZE 1000
 #define TIMEOUT 6
 #define HTTP_PORT 80
 
@@ -23,29 +23,33 @@ public:
 private:
 	// string getHostnameFromRequest();
 
-	void getRequestFromClient();
-	void getURLFromRequest();
+	bool getRequestFromClient();
+	void getURLFromRequestHeader();
 	void URLProcessing();
 	
-	string getStandardizeHTTPRequest();
+	string getStandardizeHTTPRequestHeader();
 
 
 	sockaddr_in* getWebserverAddress();
 
-	void requestProcessing();
+	void requestHeaderProcessing();
 	bool isSupport();
 
 	bool sendRequestToWebServer();
 	bool transferResponseToClient();
 
 	bool sendDeniedResponse();
-
+	
+	// header
+	void standardizeHeader();
 private:
 	CacheManager* cache_manager;
 	BlackList* blacklist;
 	int client_proxy, proxy_web;
 
-	string request;
+	vector<char> request;
+	// string request;
+	string request_header;
 
 	string url;
 	
