@@ -5,7 +5,8 @@
 
 
 ProxyServer::ProxyServer(int port):
-	connection_manager(this)
+	connection_manager(this),
+	cache_manager()
 {
 	// INIT
 	WSADATA init;
@@ -29,8 +30,7 @@ ProxyServer::ProxyServer(int port):
 	}
 
 	// bind sokcet
-	::bind(this->proxy_server, (sockaddr*)& proxy_address, sizeof(proxy_address));
-
+	int c = ::bind(this->proxy_server, (sockaddr*)& proxy_address, sizeof(proxy_address));
 }
 
 ProxyServer::~ProxyServer()
@@ -44,7 +44,12 @@ void ProxyServer::run()
 	this->connection_manager.startListenning();
 }
 
-SOCKET ProxyServer::getProxyServerSocket()
+int ProxyServer::getProxyServerSocket()
 {
 	return this->proxy_server;
+}
+
+CacheManager* ProxyServer::getCacheManager()
+{
+	return &this->cache_manager;
 }

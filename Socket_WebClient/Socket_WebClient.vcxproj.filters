@@ -39,6 +39,12 @@
     <ClInclude Include="ProxyServer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="BlackList.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CacheManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -54,6 +60,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ProxyServer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BlackList.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CacheManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -19,10 +19,13 @@ public:
 	~ConnectionManager();
 	ProxyServer* getProxyServer();
 	void startListenning();
+
+private:
+	void listenConnection();
+
 private:
 	vector<thread *> online_connections;
 	ProxyServer* parent;
-	void listenConnection();
 };
 
 

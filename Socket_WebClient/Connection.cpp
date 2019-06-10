@@ -2,6 +2,9 @@
 #include "Connection.h"
 #include "ConnectionManager.h"
 #include "ProxyServer.h"
+#include "BlackList.h"
+#include "CacheManager.h"
+
 
 const vector<string> Connection::support_version = { "HTTP/1.0", "HTTP/1.1" };
 const vector<string> Connection::support_method = { "GET", "POST" };
@@ -9,34 +12,87 @@ const vector<string> Connection::support_protocol = { "http://" };
 
 Connection::Connection(ConnectionManager* connect_mng)
 {
-	// ProxyServer* proxy_server = connect_mng->getProxyServer();
-	// CSocket* proxy_server_socket = proxy_server->getProxyServerSocket();
-	// proxy_server_socket->Accept(this->client_proxy);
-	//connect_mng->getProxyServer()->getProxyServerSocket()->Accept(this->client_proxy);
-
 	sockaddr_in client_address;
 	int size = sizeof(client_address);
-	client_proxy = ::accept(connect_mng->getProxyServer()->getProxyServerSocket(), (sockaddr*)& client_address, &size);
+
+	this->client_proxy = ::accept(connect_mng->getProxyServer()->getProxyServerSocket(), (sockaddr*)& client_address, &size);
+
+	this->blacklist = new BlackList();
+
+	this->cache_manager = connect_mng->getProxyServer()->getCacheManager();
 }
 
-void Connection::startConnecting()
+Connection::~Connection()
 {
-	if (client_proxy == INVALID_SOCKET) {
+	::closesocket(this->client_proxy);
+	delete this->blacklist;
+}
+
+// ********************************************//
+
+void Connection::start()
+{
+	if (this->client_proxy == INVALID_SOCKET) {
 		cout << "Error accept" << endl;
 		return;
 	}
 	try {
-		this->request = this->getRequestFromClient();
-
-		if (this->request != "" && !isSupport())
+		// error or not support
+		if (!this->getRequestFromClient())
 		{
-			cout << "\nNot support!\n";
+			return;
+		}
+
+		// Get url, hostname, protocol, page
+		this->requestHeaderProcessing();
+
+
+		if (this->blacklist != NULL && blacklist->isExist(this->hostname))
+		{
+			cout << "\nHost in blacklist!\n";
 			this->sendDeniedResponse();
 			return;
 		}
 
-		// Get hostname
-		this->requestProcessing();
+
+		if (this->cache_manager != NULL && this->cache_manager->isExist(this->url))
+		{
+			cout << "Already in cache! Just forward to client...\n";
+			vector<char>* cache_data = this->cache_manager->getResponse(this->url);
+
+			int sent = 0;
+			int send_response = 0;
+			int len = cache_data->size();
+
+			while (sent < len)
+			{
+				send_response = ::send(this->client_proxy, cache_data->data() + sent, len - sent, 0);
+
+				cout << "Send to client: send_response = " << send_response << " bytes\n";
+				cout << cache_data->data() << endl;
+				// send error
+				if (send_response < 0) {
+					cout << "Error when send request to web server\n";
+					break;
+				}
+
+				// send done
+				if (send_response == 0)
+				{
+					break;
+				}
+
+				sent += send_response;
+			}
+
+			if (cache_data != NULL)
+			{
+				delete cache_data;
+			}
+
+			return;
+		}
+
 
 		// OPEN CONNECT TO WEB SERVER 
 		this->proxy_web = ::socket(AF_INET, SOCK_STREAM, 0);
@@ -70,74 +126,83 @@ void Connection::startConnecting()
 	}
 }
 
-Connection::~Connection()
-{
-	::closesocket(this->client_proxy);
-}
-
-string Connection::getRequestFromClient()
+bool Connection::getRequestFromClient()
 {
 	try
 	{
-		string result;
 		char buffer[BUFFER_SIZE + 1] = { 0 };
+
+		bool first = true;
 		int response_size = 0;
-		if ((response_size = ::recv(this->client_proxy, buffer, BUFFER_SIZE, 0)) > 0)
-		{
-			cout << "Receive from browser: response_size = " << response_size << " bytes\n";
-			if (buffer != "") {
-				result += buffer;
+
+		timeval timeout = { 3, 0 };
+		fd_set in_set;
+		while (true) {
+			FD_ZERO(&in_set);
+			FD_SET(this->client_proxy, &in_set);
+			int cnt = select(this->client_proxy + 1, &in_set, NULL, NULL, &timeout);
+			if (FD_ISSET(this->client_proxy, &in_set))
+			{
+
+				response_size = ::recv(this->client_proxy, buffer, BUFFER_SIZE, 0);
+				if (response_size > 0)
+				{
+					if (first)
+					{
+						int i = 0;
+						while (buffer[i] != '\n')
+						{
+							i++;
+						}
+
+						this->request_header = string(buffer, i + 1);
+
+						if (!this->isSupport())
+						{
+							cout << this->request_header << " not support!\n";
+							this->sendDeniedResponse();
+
+							return false;
+						}
+
+						first = false;
+					}
+
+					cout << "Receive from browser: response_size = " << response_size << " bytes\n";
+
+					if (buffer != "") {
+						this->request.insert(this->request.end(), buffer, buffer + response_size);
+					}
+
+					memset(buffer, 0, response_size);
+
+				}
+				else {
+					break;
+
+				}
 			}
-			memset(buffer, 0, response_size);
+			else
+			{
+				break;
+			}
 		}
-		else
+		if (first)
 		{
 			cout << "Cant receive from browser\n";
-			return "";
+			//this->request_header = "";
+			return false;
 		}
-		cout << "\nRequest: \n\t" << result << "\n";
-		return result;
+
+		cout << "\nRequest: \n\t" << this->request.data() << "\n";
+		return true;
 	}
 	catch (...)
 	{
 		cout << "Having some error (getRequest) \n";
-		return "";
+		//this->request_header = "";
+		return false;
 	}
-}
-
-string Connection::getStandardizeHTTPRequest()
-{
-	string result = request;
-	int pos_protocol = request.find("http://");
-	int len_protocol = 7;
-	int len_host = hostname.length();
-	result.replace(pos_protocol, len_protocol + len_host, "");
-	cout << "send to web server: " << result << endl;
-	return result;
-}
-
-string Connection::getHostnameFromRequest()
-{
-	string result;
-	int pos_protocol = request.find("http://");
-	int len_protocol = 7;
-	int pos_hostname = pos_protocol + len_protocol;
-	int pos_page = request.find('/', pos_hostname + 1);
-	result = request.substr(pos_hostname, pos_page - pos_hostname);
-	return result;
-}
-
-
-// GET http://www.abc.com/abc/ HTTP1.0
-// => GET /abc HTTP/1.0
-// <method> <protocol><hostname><page> protocol
-void Connection::requestProcessing()
-{
-	string protocol = "http://";
-
-	//url = getURLFromReqeust();
-	//url = http://www.abc.com/abc/
-	this->hostname = getHostnameFromRequest();
 }
 
 bool Connection::isSupport()
@@ -148,7 +213,7 @@ bool Connection::isSupport()
 	{
 		for (string str : support[i])
 		{
-			if (request.find(str) != -1)
+			if (request_header.find(str) != -1)
 			{
 				check[i] = true;
 				break;
@@ -161,22 +226,28 @@ bool Connection::isSupport()
 	return true;
 }
 
+void Connection::requestHeaderProcessing()
+{
+	this->getURLFromRequestHeader();
+	this->URLProcessing();
+}
+
 bool Connection::sendRequestToWebServer()
 {
 	// 2. SEND REQUEST
 
 		// 2.1. GET WEB SERVER ADDRESS
 
-	sockaddr_in *web_address = this->getWebserverAddress();
+	sockaddr_in* web_address = this->getWebserverAddress();
 
 	if (web_address == NULL)
 	{
 		return false;
 	}
 
-		// 2.2. CONNECT TO WEB SERVER
+	// 2.2. CONNECT TO WEB SERVER
 
-	if (connect(this->proxy_web, (sockaddr *) web_address, sizeof(*web_address)) < 0)
+	if (connect(this->proxy_web, (sockaddr*)web_address, sizeof(*web_address)) < 0)
 	{
 		cout << "Could not connect to host!!!\n";
 		return false;
@@ -185,21 +256,21 @@ bool Connection::sendRequestToWebServer()
 	delete web_address;
 	cout << "Connected!\n";
 
-		// 2.3. SEND REQUEST TO WEB SERVER
+	// 2.3. SEND REQUEST TO WEB SERVER
 
 	int send_response = 0;
 
 	// replace url by page
-	string request_header = getStandardizeHTTPRequest();
+	this->standardizeHeader();
 
 	int sent = 0;
-	int request_header_length = request_header.length();
+	int request_header_length = this->request.size();
 
 	// Send the request_header to the server
+	cout << "Sending request_header...\n";
 	while (sent < request_header_length)
 	{
-		cout << "Sending request_header...\n";
-		send_response = ::send(this->proxy_web, request_header.substr(sent).c_str(), request_header_length - sent, 0);
+		send_response = ::send(this->proxy_web, this->request.data() + sent, request_header_length - sent, 0);
 
 		cout << "Send to web server: send_response = " << send_response << " bytes\n";
 
@@ -237,7 +308,8 @@ bool Connection::transferResponseToClient()
 	timeval timeout_client = { TIMEOUT, 0 };
 
 	fd_set in_set;
-
+	bool cache = true;
+	bool first = true;
 	while (true) {
 		FD_ZERO(&in_set);
 		FD_SET(this->proxy_web, &in_set);
@@ -253,16 +325,29 @@ bool Connection::transferResponseToClient()
 			// error when receive or done
 			if (receive_response < 0)
 			{
+				this->cache_manager->clear(this->url);
 				cout << "Error when receive from web server\n";
 				return false;
 			}
 			else if (receive_response == 0) {
 				break;
 			}
-
+			else {
+				if (first)
+				{
+					string header(receive_buffer, 20);
+					if (header.find("GET 200 OK") == -1)
+					{
+						cache = false;
+					}
+					first = false;
+				}
+				if (cache)
+					this->cache_manager->append(this->url, receive_buffer, receive_response);
+			}
 			cout << "Received from web server: receive_response = " << receive_response << " bytes\n";
 
-			cout << "Forwarding to client...: \n\t" << receive_buffer << "\n";
+			//cout << "Forwarding to client...: \n\t" << receive_buffer << "\n";
 
 			// send to client
 
@@ -272,25 +357,85 @@ bool Connection::transferResponseToClient()
 			// send error: client side
 			if (send_response < 0)
 			{
+				this->cache_manager->clear(this->url);
 				cout << "Error when send to client \n";
 				return false;
 			}
 			else if (send_response == 0) {
 				break;
 			}
-			// add to cache
-			//cache.insert(cache.end(), receive_buffer, receive_buffer + receive_response);
 
 			// clear buffer
 			memset(receive_buffer, 0, receive_response);
 		}
 		else {
-			//saveToCache(getURL(request, "http://"), cache);
 			break;
 
 		}
 	}
 	return true;
+}
+
+bool Connection::sendDeniedResponse()
+{
+	string ResForbidden = "HTTP/1.0 403 Forbidden\r\nCache-Control: no-cache\r\nConnection: close\r\n";
+	return (::send(this->client_proxy, ResForbidden.c_str(), ResForbidden.length(), 0) >= 0);
+}
+
+// *******************************************//
+
+// GET http://www.abc.com/abc/ HTTP1.0
+// => GET /abc HTTP/1.0
+// <method> <protocol><hostname><page> protocol
+
+void Connection::getURLFromRequestHeader()
+{
+	for (string protocol : this->support_protocol)
+	{
+		int start = this->request_header.find(protocol);
+		if (start != -1)
+		{
+			int end = this->request_header.find(' ', start) - 1;
+			this->url = this->request_header.substr(start, end - start + 1);
+			break;
+		}
+	}
+}
+
+// GET http://www.abc.com/abc/ HTTP1.0
+// => GET /abc HTTP/1.0
+// <method> <protocol><hostname><page> protocol
+
+void Connection::URLProcessing()
+{
+	if (this->url == "")
+		return;
+	int start_protocol = 0;
+	int start_hostname = this->url.find('/') + 2;
+	int start_page = this->url.find('/', start_hostname);
+
+	this->protocol = this->url.substr(start_protocol, start_hostname - start_protocol);
+	this->hostname = this->url.substr(start_hostname, start_page - start_hostname);
+	this->page = this->url.substr(start_page);
+}
+
+
+// GET http://www.abc.com/abc/ HTTP1.0
+// => GET /abc HTTP/1.0
+// <method> <protocol><hostname><page> protocol
+void Connection::standardizeHeader()
+{
+	string standard_header = this->getStandardizeHTTPRequestHeader();
+	const char* tmp = standard_header.c_str();
+	this->request.erase(this->request.begin(), this->request.begin() + this->request_header.length());
+	this->request.insert(this->request.begin(), tmp, tmp + standard_header.length());
+}
+
+string Connection::getStandardizeHTTPRequestHeader()
+{
+	string result = request_header;
+	result.replace(result.find(url), url.length(), page);
+	return result;
 }
 
 sockaddr_in* Connection::getWebserverAddress()
@@ -308,10 +453,4 @@ sockaddr_in* Connection::getWebserverAddress()
 	result->sin_port = htons(HTTP_PORT);
 
 	return result;
-}
-
-bool Connection::sendDeniedResponse()
-{
-	string ResForbidden = "HTTP/1.0 403 Forbidden\r\nCache-Control: no-cache\r\nConnection: close\r\n";
-	return (::send(this->client_proxy, ResForbidden.c_str(), ResForbidden.length(), 0) >= 0);
 }

@@ -7,36 +7,55 @@
 #define TIMEOUT 6
 #define HTTP_PORT 80
 
-using namespace std;
 class ConnectionManager;
+class BlackList;
+class CacheManager;
 
+
+using namespace std;
 class Connection
 {
 public:
 	Connection(ConnectionManager*);
-	void startConnecting();
+	void start();
 	~Connection();
+
 private:
-	string getRequestFromClient();
+	// string getHostnameFromRequest();
 
-	string getStandardizeHTTPRequest();
+	bool getRequestFromClient();
+	void getURLFromRequestHeader();
+	void URLProcessing();
+	
+	string getStandardizeHTTPRequestHeader();
 
-	string getHostnameFromRequest();
 
 	sockaddr_in* getWebserverAddress();
-	void requestProcessing();
+
+	void requestHeaderProcessing();
 	bool isSupport();
 
 	bool sendRequestToWebServer();
 	bool transferResponseToClient();
 
 	bool sendDeniedResponse();
+	
+	// header
+	void standardizeHeader();
 private:
-	SOCKET client_proxy, proxy_web;
-	string url;
-	string hostname;
-	string request;
+	CacheManager* cache_manager;
+	BlackList* blacklist;
+	int client_proxy, proxy_web;
 
+	vector<char> request;
+	// string request;
+	string request_header;
+
+	string url;
+	
+	string protocol;
+	string hostname;
+	string page;
 private:
 	static const vector<string> support_method;
 	static const vector<string> support_protocol;
