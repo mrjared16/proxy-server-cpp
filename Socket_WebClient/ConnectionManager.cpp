@@ -45,7 +45,7 @@ void ConnectionManager::listenConnection()
 	Connection *connection = new Connection(this);
 	thread *t = new thread(&ConnectionManager::listenConnection, this);
 	online_connections.push_back(t);
-	connection->startConnecting();
+	connection->start();
 	delete connection;
 }
 

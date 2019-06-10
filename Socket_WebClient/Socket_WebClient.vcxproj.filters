@@ -39,10 +39,10 @@
     <ClInclude Include="ProxyServer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Cache.h">
+    <ClInclude Include="BlackList.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BlackList.h">
+    <ClInclude Include="CacheManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -62,10 +62,10 @@
     <ClCompile Include="ProxyServer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Cache.cpp">
+    <ClCompile Include="BlackList.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BlackList.cpp">
+    <ClCompile Include="CacheManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

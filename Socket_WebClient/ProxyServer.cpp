@@ -5,7 +5,8 @@
 
 
 ProxyServer::ProxyServer(int port):
-	connection_manager(this)
+	connection_manager(this),
+	cache_manager()
 {
 	// INIT
 	WSADATA init;
@@ -46,4 +47,9 @@ void ProxyServer::run()
 SOCKET ProxyServer::getProxyServerSocket()
 {
 	return this->proxy_server;
+}
+
+CacheManager* ProxyServer::getCacheManager()
+{
+	return &this->cache_manager;
 }

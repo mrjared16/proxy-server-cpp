@@ -5,7 +5,7 @@
 BlackList::BlackList()
 {
 	fstream file;
-	file.open("blacklist.conf", ios::in);
+	file.open(CONFIG_FILE, ios::in);
 	if (file.is_open()) {
 		while (!file.eof()) {
 			string tmp;
@@ -23,7 +23,7 @@ BlackList::~BlackList()
 {
 }
 
-bool BlackList::isExist(string host)
+bool BlackList::isExist(const string& host)
 {
 	for (int i = 0; i < this->blacklist_descriptor.size(); i++) {
 		if (this->blacklist_descriptor[i] == host) {
