@@ -10,7 +10,7 @@ public:
 	ProxyServer(int port);
 	~ProxyServer();
 
-	SOCKET getProxyServerSocket();
+	int getProxyServerSocket();
 	CacheManager* getCacheManager();
 
 	void run();
@@ -18,6 +18,6 @@ private:
 	ConnectionManager connection_manager;
 	CacheManager cache_manager;
 
-	SOCKET proxy_server;
+	int proxy_server;
 };
 

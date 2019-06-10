@@ -44,7 +44,7 @@ void ProxyServer::run()
 	this->connection_manager.startListenning();
 }
 
-SOCKET ProxyServer::getProxyServerSocket()
+int ProxyServer::getProxyServerSocket()
 {
 	return this->proxy_server;
 }

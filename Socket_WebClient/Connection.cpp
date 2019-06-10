@@ -67,7 +67,7 @@ void Connection::start()
 		if (this->cache_manager != NULL && this->cache_manager->isExist(this->url))
 		{
 			cout << "Already in cache! Just forward to client...\n";
-			vector<char> *cache_data = this->cache_manager->getResponse(this->url);
+			vector<char>* cache_data = this->cache_manager->getResponse(this->url);
 
 			int sent = 0;
 			int send_response = 0;
@@ -78,7 +78,7 @@ void Connection::start()
 				send_response = ::send(this->client_proxy, cache_data->data() + sent, len - sent, 0);
 
 				cout << "Send to client: send_response = " << send_response << " bytes\n";
-
+				cout << cache_data->data() << endl;
 				// send error
 				if (send_response < 0) {
 					cout << "Error when send request to web server\n";
@@ -269,7 +269,8 @@ bool Connection::transferResponseToClient()
 	timeval timeout_client = { TIMEOUT, 0 };
 
 	fd_set in_set;
-
+	bool cache = true;
+	bool first = true;
 	while (true) {
 		FD_ZERO(&in_set);
 		FD_SET(this->proxy_web, &in_set);
@@ -285,16 +286,29 @@ bool Connection::transferResponseToClient()
 			// error when receive or done
 			if (receive_response < 0)
 			{
+				this->cache_manager->clear(this->url);
 				cout << "Error when receive from web server\n";
 				return false;
 			}
 			else if (receive_response == 0) {
 				break;
 			}
-
+			else {
+				if (first)
+				{
+					string header(receive_buffer, 20);
+					if (header.find("200 OK") == -1)
+					{
+						cache = false;
+					}
+					first = false;
+				}
+				if (cache)
+					this->cache_manager->append(this->url, receive_buffer, receive_response);
+			}
 			cout << "Received from web server: receive_response = " << receive_response << " bytes\n";
 
-			cout << "Forwarding to client...: \n\t" << receive_buffer << "\n";
+			//cout << "Forwarding to client...: \n\t" << receive_buffer << "\n";
 
 			// send to client
 
@@ -304,6 +318,7 @@ bool Connection::transferResponseToClient()
 			// send error: client side
 			if (send_response < 0)
 			{
+				this->cache_manager->clear(this->url);
 				cout << "Error when send to client \n";
 				return false;
 			}
