@@ -17,7 +17,11 @@ HTTPRequest::~HTTPRequest()
 void HTTPRequest::handle()
 {
 	int start_method = 0;
-	int start_protocol = first_line.find(" ") + 1;
+	int start_protocol = first_line.find("http://");
+	if (start_protocol == string::npos)
+	{
+		return;
+	}
 	int start_hostname = first_line.find('/') + 2;
 	int start_page = first_line.find('/', start_hostname);
 	int start_version = first_line.find(" ", start_page) + 1;
@@ -43,6 +47,10 @@ string HTTPRequest::getFirstLine()
 {
 	string start_line = this->method + " " + this->page + " " + this->version;
 	return start_line;
+}
+string HTTPRequest::getStartLine()
+{
+	return this->first_line;
 }
 
 string HTTPRequest::getHostname()

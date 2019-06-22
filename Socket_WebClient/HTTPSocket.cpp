@@ -1,19 +1,19 @@
 #include "stdafx.h"
 #include "HTTPSocket.h"
-#include "Connection.h"
-
+#include <vector>
+#include "HTTPData.h"
 
 HTTPSocket::HTTPSocket(int socket)
 {
-	this->socket = socket;
-	this->is_open = (socket < 0) ? false : true;
-	this->is_close = (socket < 0) ? true : false;
+	this->socket = (socket == INVALID_SOCKET) ? -1 : socket;
+	this->is_open = (socket == INVALID_SOCKET) ? false : true;
+	this->is_close = (socket == INVALID_SOCKET) ? true : false;
 }
 
 
 HTTPSocket::HTTPSocket(string hostname)
 {
-//	this->socket = -1;
+	this->socket = -1;
 	this->is_open = false;
 	this->is_close = true;
 
@@ -28,14 +28,18 @@ HTTPSocket::HTTPSocket(string hostname)
 	web_address->sin_family = AF_INET;
 	memcpy(&web_address->sin_addr, hent->h_addr, hent->h_length);
 	web_address->sin_port = htons(HTTP_PORT);
-
-	if (::connect(this->socket, (sockaddr*)web_address, sizeof(*web_address)) >= 0)
+	// int c = ::connect(this->socket, (sockaddr*)web_address, sizeof(*web_address));
+	if (::connect(this->socket, (sockaddr*)web_address, sizeof(*web_address)) == SOCKET_ERROR)
 	{
+		cout << "Could not connect to host\n";
+	}
+	else {
 		this->is_open = true;
 		this->is_close = false;
 	}
+
 	delete web_address;
-	//delete hent;
+	//free(hent);
 }
 
 bool HTTPSocket::isOpened()
@@ -49,7 +53,7 @@ bool HTTPSocket::isClosed()
 }
 
 // receive and parse to data
-bool HTTPSocket::Receive(HTTPData* data)
+bool HTTPSocket::Receive(HTTPData * data)
 {
 	int body_length = -1;
 	string header_first_line, headers;
@@ -97,7 +101,7 @@ bool HTTPSocket::Receive(HTTPData* data)
 				if (end_content_length != std::string::npos)
 				{
 					string length = tmp.substr(start_content_length, end_content_length - start_content_length);
-					body_length = std::stoi(length);
+					body_length = atoi(length.c_str());
 				}
 			}
 		}

@@ -1,6 +1,9 @@
 #pragma once
-#include "HTTPData.h"
 
+#define HTTP_PORT 80
+#define BUFFER_SIZE 1000
+using namespace std;
+class HTTPData;
 class HTTPSocket
 {
 public:

@@ -293,15 +293,15 @@ void Connection::start()
 
 bool Connection::isSupport(HTTPRequest* req)
 {
-	//string start_line = req->getFirstLine();
-	string request_properties[3] = {req->getMethod(), req->getProtocol(), req->getVersion()};
+	string start_line = req->getStartLine();
+//	string request_properties[3] = {req->getMethod(), req->getProtocol(), req->getVersion()};
 	bool check[3] = { false, false, false };
 	vector<string> support[3] = { support_method, support_protocol, support_version };
 	for (int i = 0; i < 3; i++)
 	{
 		for (string str : support[i])
 		{
-			if (request_properties[i] == str)
+			if (start_line.find(str) != string::npos)
 			{
 				check[i] = true;
 				break;

@@ -8,6 +8,7 @@ public:
 	virtual ~HTTPRequest();
 
 	string getFirstLine();
+	string getStartLine();
 	void handle();
 
 	// string getStartLine();

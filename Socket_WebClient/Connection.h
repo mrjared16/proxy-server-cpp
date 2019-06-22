@@ -5,10 +5,7 @@
 #include "HTTPData.h"
 #include "HTTPSocket.h"
 
-#define BUFFER_SIZE 1000
 #define TIMEOUT 6
-#define HTTP_PORT 80
-
 class ConnectionManager;
 class BlackList;
 class CacheManager;
