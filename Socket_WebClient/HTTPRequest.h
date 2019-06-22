@@ -6,7 +6,7 @@ class HTTPRequest :
 public:
 	HTTPRequest();
 	virtual ~HTTPRequest();
-	void init(string header_line);
+	void handle(string header_line);
 	bool isSuport();
 	string getURL();
 private:

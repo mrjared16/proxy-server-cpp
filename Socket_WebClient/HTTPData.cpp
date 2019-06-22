@@ -10,3 +10,8 @@ HTTPData::HTTPData()
 HTTPData::~HTTPData()
 {
 }
+
+string HTTPData::getHeader()
+{
+	return string();
+}

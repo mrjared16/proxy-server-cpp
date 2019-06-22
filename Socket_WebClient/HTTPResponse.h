@@ -6,6 +6,7 @@ class HTTPResponse :
 public:
 	HTTPResponse();
 	virtual ~HTTPResponse();
+	void handle(string header_line);
 	void init(string header_line);
 	bool isCache();
 private:
