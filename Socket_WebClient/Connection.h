@@ -12,7 +12,8 @@
 class ConnectionManager;
 class BlackList;
 class CacheManager;
-
+class HTTPResponse;
+class HTTPRequest;
 
 using namespace std;
 class Connection
