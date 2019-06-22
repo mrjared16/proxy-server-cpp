@@ -38,7 +38,7 @@ string HTTPRequest::getURL()
 
 //start line = GET /abc HTTP/1.0
 //start line = method + page + version
-string HTTPRequest::getStartLine()
+string HTTPRequest::getFirstLine()
 {
 	string start_line = this->method + " " + this->page + " " + this->version;
 	return start_line;

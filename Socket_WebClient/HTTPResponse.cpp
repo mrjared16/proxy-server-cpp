@@ -32,7 +32,7 @@ bool HTTPResponse::isCache()
 		return false;
 	}
 	else {
-		if (this->header.find("no-cache") != string::npos) {
+		if (this->headers.find("no-cache") != string::npos) {
 			return false;
 		}
 		else {
@@ -43,7 +43,7 @@ bool HTTPResponse::isCache()
 
 //status line = HTTP/1.1 404 Not Found
 //status line = protocol version + status code + status text
-string HTTPResponse::getStatusLine()
+string HTTPResponse::getFirstLine()
 {
 	string status_line = this->protocol_version + " " + this->status_code + " " + this->status_text;
 	return status_line;

@@ -11,6 +11,11 @@ HTTPData::~HTTPData()
 {
 }
 
+string HTTPData::getFirstLine()
+{
+	return this->first_line;
+}
+
 string HTTPData::getHeaders()
 {
 	return this->headers;

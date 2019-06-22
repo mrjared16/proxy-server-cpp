@@ -6,6 +6,7 @@ class HTTPData
 public:
 	HTTPData();
 	virtual ~HTTPData();
+	virtual string getFirstLine();
 	string getHeaders();
 	vector<char> getBody();
 	int getBodyLength();

@@ -8,7 +8,7 @@ public:
 	virtual ~HTTPRequest();
 	void handle(string first_line);
 	string getURL();
-	string getStartLine();
+	string getFirstLine();
 	string getHostname();
 private:
 	string method;

@@ -8,7 +8,7 @@ public:
 	virtual ~HTTPResponse();
 	void handle(string status_line);
 	bool isCache();
-	string getStatusLine();
+	string getFirstLine();
 private:
 	string protocol_version;
 	string status_code;
