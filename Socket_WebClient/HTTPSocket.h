@@ -8,12 +8,12 @@ public:
 	HTTPSocket(string host);
 	bool isOpened();
 	bool isClosed();
-	void receive(HTTPData* data);
-	void send(HTTPData* data);
+	bool Receive(HTTPData* data);
+	bool Send(HTTPData* data);
 	virtual ~HTTPSocket();
 private:
 	int socket;
-	bool open;
-	bool close;
+	bool is_open;
+	bool is_close;
 };
 

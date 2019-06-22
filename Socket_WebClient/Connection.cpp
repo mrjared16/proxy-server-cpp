@@ -48,15 +48,15 @@ void Connection::start()
 	}
 
 	this->request = new HTTPRequest();
-	this->client_proxy->receive(request);
+	this->client_proxy->Receive(request);
 
 	// not support
 	if (!this->isSupport((HTTPRequest*)this->request))
 	{
 		cout << "Not support this request \n";
 		this->response = this->getDeniedResponse();
-		this->client_proxy->send(this->response);
-		
+		this->client_proxy->Send(this->response);
+
 		delete this->request;
 		delete this->response;
 
@@ -69,8 +69,8 @@ void Connection::start()
 	{
 		cout << "Host in blacklist\n";
 		this->response = this->getDeniedResponse();
-		this->client_proxy->send(this->response);
-		
+		this->client_proxy->Send(this->response);
+
 		delete this->request;
 		delete this->response;
 		return;
@@ -81,8 +81,8 @@ void Connection::start()
 	if (this->cache_manager != NULL && this->cache_manager->isExist(url))
 	{
 		// get cache
-		this->cache_manager->getResponse(url, (HTTPResponse*&)this->response);
-		this->client_proxy->send(this->response);
+		this->cache_manager->getResponse(url, (HTTPResponse * &)this->response);
+		this->client_proxy->Send(this->response);
 
 		delete this->request;
 	}
@@ -94,23 +94,23 @@ void Connection::start()
 			cout << "Error connect to web server!\n";
 
 			this->response = this->getCantResolveHostResponse();
-			this->client_proxy->send(this->response);
+			this->client_proxy->Send(this->response);
 
 			delete this->request;
 			delete this->response;
 			delete this->proxy_web;
-			
+
 			return;
 		}
-		this->proxy_web->send(this->request);
+		this->proxy_web->Send(this->request);
 
 		this->response = new HTTPResponse();
-		this->proxy_web->receive(this->response);
+		this->proxy_web->Receive(this->response);
 		// slower than old version
 		// only sent to client when received all data
-		this->client_proxy->send(this->response);
+		this->client_proxy->Send(this->response);
 		this->cache_manager->insert(url, (HTTPResponse*)this->response);
-		
+
 		delete this->request;
 		delete this->response;
 		delete this->proxy_web;
@@ -315,6 +315,24 @@ bool Connection::isSupport(HTTPRequest* req)
 }
 
 HTTPResponse* Connection::getDeniedResponse()
+{
+	HTTPResponse* result = new HTTPResponse();
+	vector<char> null_vector;
+	result->init("HTTP/1.0 403 Forbidden",
+		"Cache-Control: no-cache\r\nConnection: close\r\n", null_vector, 0);
+	return result;
+}
+HTTPResponse* Connection::getCantResolveHostResponse()
+{
+	HTTPResponse* result = new HTTPResponse();
+	vector<char> null_vector;
+	result->init("HTTP/1.0 403 Forbidden",
+		"Cache-Control: no-cache\r\nConnection: close\r\n", null_vector, 0);
+	return result;
+
+}
+
+HTTPResponse* Connection::getTimeoutResponse()
 {
 	HTTPResponse* result = new HTTPResponse();
 	vector<char> null_vector;

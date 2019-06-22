@@ -16,6 +16,7 @@ void CacheManager::insert(const string &url, HTTPResponse *response)
 {
 	if (response->isCache())
 	{
+	
 		this->my_cache[url] = *response;
 	}
 }
@@ -33,10 +34,10 @@ void CacheManager::clear(const string& url)
 
 bool CacheManager::isExist(const string &url)
 {
-	if (this->my_cache[url].getFirstLine().size() == 0)
-		return false;
-	else
+	if (this->my_cache.find(url) != this->my_cache.end())
 		return true;
+	else
+		return false;
 }
 
 void CacheManager::getResponse(const string &url, HTTPResponse *&response)

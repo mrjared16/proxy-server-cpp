@@ -4,6 +4,7 @@
 
 HTTPData::HTTPData()
 {
+	this->body_length = -1;
 }
 
 
@@ -31,7 +32,7 @@ int HTTPData::getBodyLength()
 	return this->body_length;
 }
 
-void HTTPData::init(string first_line, string headers, vector<char> body, int body_length)
+void HTTPData::init(const string &first_line, const string &headers, const vector<char> &body, const int &body_length)
 {
 	this->first_line = first_line;
 	this->headers = headers;

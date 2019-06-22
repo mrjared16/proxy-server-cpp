@@ -39,6 +39,7 @@ private:
 	bool isSupport(HTTPRequest *req);
 	HTTPResponse* getDeniedResponse();
 	HTTPResponse* getCantResolveHostResponse();
+	HTTPResponse* getTimeoutResponse();
 
 	// bool sendRequestToWebServer();
 	// bool transferResponseToClient();
