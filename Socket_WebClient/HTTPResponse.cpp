@@ -33,18 +33,5 @@ void HTTPResponse::handle()
 //Chi luu lai response neu headers co code = 200 va khong co no-cache
 bool HTTPResponse::isCache()
 {
-	/*
 	return (this->status_code == "200" && this->headers.find("no-cache") == string::npos);
-	*/
-	if (this->status_code != "200") {
-		return false;
-	}
-	else {
-		if (this->headers.find("no-cache") != string::npos) {
-			return false;
-		}
-		else {
-			return true;
-		}
-	}
 }

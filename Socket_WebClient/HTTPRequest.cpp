@@ -9,7 +9,8 @@ HTTPRequest::HTTPRequest()
 HTTPRequest::~HTTPRequest()
 {
 }
-
+
+
 //GET http://www.abc.com/abc/ HTTP1.1
 //Tu first line (dong dau tien trong du lieu nhan) phan tich va lay ra
 //method, protocol, hostname, page va version
