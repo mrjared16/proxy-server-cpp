@@ -9,6 +9,7 @@ public:
 	void handle(string header_line);
 	bool isSuport();
 	string getURL();
+	string getHost();
 private:
 	string method;
 	string protocol;

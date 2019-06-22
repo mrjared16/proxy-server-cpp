@@ -90,6 +90,7 @@
     <ClInclude Include="HTTPData.h" />
     <ClInclude Include="HTTPRequest.h" />
     <ClInclude Include="HTTPResponse.h" />
+    <ClInclude Include="HTTPSocket.h" />
     <ClInclude Include="ProxyServer.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Socket_WebClient.h" />
@@ -104,6 +105,7 @@
     <ClCompile Include="HTTPData.cpp" />
     <ClCompile Include="HTTPRequest.cpp" />
     <ClCompile Include="HTTPResponse.cpp" />
+    <ClCompile Include="HTTPSocket.cpp" />
     <ClCompile Include="ProxyServer.cpp" />
     <ClCompile Include="Socket_WebClient.cpp" />
     <ClCompile Include="stdafx.cpp">

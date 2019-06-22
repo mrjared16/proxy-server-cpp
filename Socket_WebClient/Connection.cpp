@@ -4,6 +4,9 @@
 #include "ProxyServer.h"
 #include "BlackList.h"
 #include "CacheManager.h"
+#include "HTTPRequest.h"
+#include "HTTPResponse.h"
+
 
 
 const vector<string> Connection::support_version = { "HTTP/1.0", "HTTP/1.1" };
@@ -14,17 +17,20 @@ Connection::Connection(ConnectionManager* connect_mng)
 {
 	sockaddr_in client_address;
 	int size = sizeof(client_address);
-
-	this->client_proxy = ::accept(connect_mng->getProxyServer()->getProxyServerSocket(), (sockaddr*)& client_address, &size);
-
+	this->cache_manager = connect_mng->getProxyServer()->getCacheManager();
 	this->blacklist = new BlackList();
 
-	this->cache_manager = connect_mng->getProxyServer()->getCacheManager();
+	//	this->client_proxy = ::accept(connect_mng->getProxyServer()->getProxyServerSocket(), (sockaddr*)& client_address, &size);
+
+	int sock_client = ::accept(connect_mng->getProxyServer()->getProxyServerSocket(), (sockaddr*)& client_address, &size);
+	this->client_proxy = new HTTPSocket(sock_client);
+
 }
 
 Connection::~Connection()
 {
-	::closesocket(this->client_proxy);
+	//::closesocket(this->client_proxy);
+	delete this->client_proxy;
 	delete this->blacklist;
 }
 
@@ -32,98 +38,130 @@ Connection::~Connection()
 
 void Connection::start()
 {
-	if (this->client_proxy == INVALID_SOCKET) {
-		cout << "Error accept" << endl;
+	if (!this->client_proxy->isOpened())
+	{
+		cout << "Error when open socket to recv from client\n";
 		return;
 	}
-	try {
-		// error or not support
-		if (!this->getRequestFromClient())
-		{
-			return;
-		}
 
-		// Get url, hostname, protocol, page
-		this->requestHeaderProcessing();
+	this->request = new HTTPRequest();
+	this->client_proxy->receive(request);
 
-
-		if (this->blacklist != NULL && blacklist->isExist(this->hostname))
-		{
-			cout << "\nHost in blacklist!\n";
-			this->sendDeniedResponse();
-			return;
-		}
-
-
-		if (this->cache_manager != NULL && this->cache_manager->isExist(this->url))
-		{
-			cout << "Already in cache! Just forward to client...\n";
-			vector<char>* cache_data = this->cache_manager->getResponse(this->url);
-
-			int sent = 0;
-			int send_response = 0;
-			int len = cache_data->size();
-
-			while (sent < len)
-			{
-				send_response = ::send(this->client_proxy, cache_data->data() + sent, len - sent, 0);
-
-				cout << "Send to client: send_response = " << send_response << " bytes\n";
-				cout << cache_data->data() << endl;
-				// send error
-				if (send_response < 0) {
-					cout << "Error when send request to web server\n";
-					break;
-				}
-
-				// send done
-				if (send_response == 0)
-				{
-					break;
-				}
-
-				sent += send_response;
-			}
-
-			if (cache_data != NULL)
-			{
-				delete cache_data;
-			}
-
-			return;
-		}
-
-
-		// OPEN CONNECT TO WEB SERVER 
-		this->proxy_web = ::socket(AF_INET, SOCK_STREAM, 0);
-		if (this->proxy_web == INVALID_SOCKET) {
-			cout << "Error socket proxy web" << endl;
-			return;
-		}
-
-		// Send standardize request to web server
-		// Fail to send
-		if (!this->sendRequestToWebServer())
-		{
-			::closesocket(this->proxy_web);
-			return;
-		}
-
-		// Receive data from web server and send to client
-		if (!this->transferResponseToClient())
-		{
-			::closesocket(this->proxy_web);
-			return;
-		}
-
-
-		// CLOSE CONNECT TO WEB SERVER
-		::closesocket(this->proxy_web);
-	}
-	catch (...)
+	string host = ((HTTPRequest*)request)->getHost();
+	if (this->blacklist != NULL && this->blacklist->isExist(host))
 	{
-		cout << "Error..\n";
+		// send denied
+		cout << "Host in blacklist\n";
+		return;
 	}
+	if (this->cache_manager != NULL && this->cache_manager->isExist(host))
+	{
+		// get cache
+	}
+	else {
+		this->proxy_web = new HTTPSocket(host);
+		this->proxy_web->send(this->request);
+
+		this->response = new HTTPResponse();
+		this->proxy_web->receive(this->response);
+		// slower than old version
+		// only sent to client when received all data
+
+	}
+	this->client_proxy->send(this->response);
+	
+		// if (this->client_proxy == INVALID_SOCKET) {
+	// 	cout << "Error accept" << endl;
+	// 	return;
+	// }
+// 	try {
+// 		// error or not support
+// 		if (!this->getRequestFromClient())
+// 		{
+// 			return;
+// 		}
+// 
+// 		// Get url, hostname, protocol, page
+// 		this->requestHeaderProcessing();
+// 
+// 
+// 		if (this->blacklist != NULL && blacklist->isExist(this->hostname))
+// 		{
+// 			cout << "\nHost in blacklist!\n";
+// 			this->sendDeniedResponse();
+// 			return;
+// 		}
+// 
+// 
+// 		if (this->cache_manager != NULL && this->cache_manager->isExist(this->url))
+// 		{
+// 			cout << "Already in cache! Just forward to client...\n";
+// 			vector<char>* cache_data = this->cache_manager->getResponse(this->url);
+// 
+// 			int sent = 0;
+// 			int send_response = 0;
+// 			int len = cache_data->size();
+// 
+// 			while (sent < len)
+// 			{
+// 				send_response = ::send(this->client_proxy, cache_data->data() + sent, len - sent, 0);
+// 
+// 				cout << "Send to client: send_response = " << send_response << " bytes\n";
+// 				cout << cache_data->data() << endl;
+// 				// send error
+// 				if (send_response < 0) {
+// 					cout << "Error when send request to web server\n";
+// 					break;
+// 				}
+// 
+// 				// send done
+// 				if (send_response == 0)
+// 				{
+// 					break;
+// 				}
+// 
+// 				sent += send_response;
+// 			}
+// 
+// 			if (cache_data != NULL)
+// 			{
+// 				delete cache_data;
+// 			}
+// 
+// 			return;
+// 		}
+// 
+// 
+// 		// OPEN CONNECT TO WEB SERVER 
+// 		this->proxy_web = ::socket(AF_INET, SOCK_STREAM, 0);
+// 		if (this->proxy_web == INVALID_SOCKET) {
+// 			cout << "Error socket proxy web" << endl;
+// 			return;
+// 		}
+// 
+// 		// Send standardize request to web server
+// 		// Fail to send
+// 		if (!this->sendRequestToWebServer())
+// 		{
+// 			::closesocket(this->proxy_web);
+// 			return;
+// 		}
+// 
+// 		// Receive data from web server and send to client
+// 		if (!this->transferResponseToClient())
+// 		{
+// 			::closesocket(this->proxy_web);
+// 			return;
+// 		}
+// 
+// 
+// 		// CLOSE CONNECT TO WEB SERVER
+// 		::closesocket(this->proxy_web);
+// 	}
+// 	catch (...)
+// 	{
+// 		cout << "Error..\n";
+// 	}
 }
 
 bool Connection::getRequestFromClient()

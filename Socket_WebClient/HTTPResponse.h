@@ -8,7 +8,7 @@ public:
 	virtual ~HTTPResponse();
 	void handle(string header_line);
 	void init(string header_line);
-	bool isCache();
+	bool canCache();
 private:
 	string version;
 	string status_code;

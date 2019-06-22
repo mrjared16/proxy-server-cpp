@@ -2,6 +2,8 @@
 #include <string>
 #include <afxsock.h>
 #include <vector>
+#include "HTTPData.h"
+#include "HTTPSocket.h"
 
 #define BUFFER_SIZE 1000
 #define TIMEOUT 6
@@ -45,9 +47,11 @@ private:
 private:
 	CacheManager* cache_manager;
 	BlackList* blacklist;
-	int client_proxy, proxy_web;
+	HTTPSocket* client_proxy, *proxy_web;
 
-	vector<char> request;
+	HTTPData* request, * response;
+
+	//vector<char> request;
 	// string request;
 	string request_header;
 
