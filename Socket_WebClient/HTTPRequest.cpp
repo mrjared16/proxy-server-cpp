@@ -50,3 +50,18 @@ string HTTPRequest::getHostname()
 	return this->hostname;
 }
 
+string HTTPRequest::getMethod()
+{
+	return this->method;
+}
+
+string HTTPRequest::getVersion()
+{
+	return this->version;
+}
+
+string HTTPRequest::getProtocol()
+{
+	return this->protocol;
+}
+

@@ -13,7 +13,7 @@ HTTPSocket::HTTPSocket(int socket)
 
 HTTPSocket::HTTPSocket(string hostname)
 {
-	this->socket = -1;
+//	this->socket = -1;
 	this->is_open = false;
 	this->is_close = true;
 
@@ -29,13 +29,13 @@ HTTPSocket::HTTPSocket(string hostname)
 	memcpy(&web_address->sin_addr, hent->h_addr, hent->h_length);
 	web_address->sin_port = htons(HTTP_PORT);
 
-	if (connect(this->socket, (sockaddr*)web_address, sizeof(*web_address)) >= 0)
+	if (::connect(this->socket, (sockaddr*)web_address, sizeof(*web_address)) >= 0)
 	{
 		this->is_open = true;
 		this->is_close = false;
 	}
 	delete web_address;
-	delete hent;
+	//delete hent;
 }
 
 bool HTTPSocket::isOpened()
@@ -81,6 +81,7 @@ bool HTTPSocket::Receive(HTTPData* data)
 			{
 				header_first_line = tmp.substr(0, end_first_line);
 				header_buffer.erase(header_buffer.begin(), header_buffer.begin() + end_first_line + 2);
+				tmp = string(header_buffer.data());
 			}
 		}
 
@@ -109,7 +110,10 @@ bool HTTPSocket::Receive(HTTPData* data)
 			// have 1 \r\n => +2
 			headers = tmp.substr(0, end_of_header + 2);
 			header_buffer.erase(header_buffer.begin(), header_buffer.begin() + end_of_header + 4);
-			body_length = 0;
+			if (body_length == -1)
+			{
+				body_length = 0;
+			}
 		}
 	}
 	// remain data
