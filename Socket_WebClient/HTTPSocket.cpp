@@ -29,6 +29,7 @@ HTTPSocket::HTTPSocket(string hostname)
 	memcpy(&web_address->sin_addr, hent->h_addr, hent->h_length);
 	web_address->sin_port = htons(HTTP_PORT);
 	// int c = ::connect(this->socket, (sockaddr*)web_address, sizeof(*web_address));
+	this->socket = ::socket(AF_INET, SOCK_STREAM, 0);
 	if (::connect(this->socket, (sockaddr*)web_address, sizeof(*web_address)) == SOCKET_ERROR)
 	{
 		cout << "Could not connect to host\n";
@@ -114,34 +115,60 @@ bool HTTPSocket::Receive(HTTPData * data)
 			// have 1 \r\n => +2
 			headers = tmp.substr(0, end_of_header + 2);
 			header_buffer.erase(header_buffer.begin(), header_buffer.begin() + end_of_header + 4);
-			if (body_length == -1)
+			if (headers.find("chunked") == string::npos)
 			{
 				body_length = 0;
+			}
+			else
+			{
+				body_length = -1;
 			}
 		}
 	}
 	// remain data
 	vector<char> body(header_buffer);
 	int len = body.size();
-	while (len < body_length)
+	if (body_length == -1)
 	{
-		res = ::recv(this->socket, buffer, body_length - len, 0);
-
-
-		if (res < 0)
+		while (res != 0)
 		{
-			cout << "Error when send data\n";
-			this->is_close = true;
-			return false;
+			res = ::recv(this->socket, buffer, body_length - len, 0);
+			if (res < 0)
+			{
+				cout << "Error when send data\n";
+				this->is_close = true;
+				return false;
+			}
+
+			body.insert(body.end(), buffer, buffer + res);
+			memset(buffer, 0, res);
+
+			len += res;
 		}
-
-		body.insert(body.end(), buffer, buffer + res);
-		memset(buffer, 0, res);
-
-		len += res;
+		body_length = len;
 	}
+	else 
+	{
+		while (len < body_length)
+		{
+			res = ::recv(this->socket, buffer, body_length - len, 0);
 
+
+			if (res < 0)
+			{
+				cout << "Error when send data\n";
+				this->is_close = true;
+				return false;
+			}
+
+			body.insert(body.end(), buffer, buffer + res);
+			memset(buffer, 0, res);
+
+			len += res;
+		}
+	}
 	data->init(header_first_line, headers, body, body_length);
+	cout << "Receive total " << body_length << " bytes\n";
 	return true;
 }
 
@@ -149,23 +176,24 @@ bool HTTPSocket::Receive(HTTPData * data)
 bool HTTPSocket::Send(HTTPData * data)
 {
 	string header = data->getFirstLine() + "\r\n" + data->getHeaders() + "\r\n";
-	if (::send(this->socket, header.c_str(), header.length(), 0) < 0)
-	{
-		cout << "Error when send data\n";
-		this->is_close = true;
-		return false;
-	}
+	vector<char> body(data->getBody());
 
-	int body_length = data->getBodyLength();
+	vector<char> buffer(header.begin(), header.end());
+	buffer.insert(buffer.end(), body.begin(), body.end());
+
+	//if (::send(this->socket, header.c_str(), header.length(), 0) < 0)
+	//{
+	//	cout << "Error when send data\n";
+	//	this->is_close = true;
+	//	return false;
+	//}
+
+	int length = buffer.size();
 	int sent = 0, res = -1;
 
-	if (body_length <= 0)
-		return false;
-
-	char* body = data->getBody().data();
-	while (sent < body_length)
+	while (sent < length)
 	{
-		res = ::send(this->socket, body + sent, body_length - sent, 0);
+		res = ::send(this->socket, buffer.data() + sent, length - sent, 0);
 		if (res < 0)
 		{
 			cout << "Error when send data\n";

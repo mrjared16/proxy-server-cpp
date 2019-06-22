@@ -49,7 +49,7 @@ void Connection::start()
 
 	this->request = new HTTPRequest();
 	this->client_proxy->Receive(request);
-
+	cout << "Receive: " << this->request->getBodyLength() << "\n" << this->request->getFirstLine() + "\n" + this->request->getHeaders() << "\n";
 	// not support
 	if (!this->isSupport((HTTPRequest*)this->request))
 	{
@@ -95,7 +95,6 @@ void Connection::start()
 
 			this->response = this->getCantResolveHostResponse();
 			this->client_proxy->Send(this->response);
-
 			delete this->request;
 			delete this->response;
 			delete this->proxy_web;
@@ -106,6 +105,8 @@ void Connection::start()
 
 		this->response = new HTTPResponse();
 		this->proxy_web->Receive(this->response);
+
+		cout << "Receive: " << this->response->getBodyLength() << "\n" << this->response->getFirstLine() + "\n" + this->response->getHeaders() << "\n";
 		// slower than old version
 		// only sent to client when received all data
 		this->client_proxy->Send(this->response);
@@ -294,7 +295,7 @@ void Connection::start()
 bool Connection::isSupport(HTTPRequest* req)
 {
 	string start_line = req->getStartLine();
-//	string request_properties[3] = {req->getMethod(), req->getProtocol(), req->getVersion()};
+	//	string request_properties[3] = {req->getMethod(), req->getProtocol(), req->getVersion()};
 	bool check[3] = { false, false, false };
 	vector<string> support[3] = { support_method, support_protocol, support_version };
 	for (int i = 0; i < 3; i++)
