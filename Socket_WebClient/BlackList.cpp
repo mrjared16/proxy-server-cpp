@@ -26,7 +26,7 @@ BlackList::~BlackList()
 bool BlackList::isExist(const string& host)
 {
 	for (int i = 0; i < this->blacklist_descriptor.size(); i++) {
-		if (this->blacklist_descriptor[i] == host) {
+		if (this->blacklist_descriptor[i].find(host) != string::npos) {
 			return true;
 		}
 	}
