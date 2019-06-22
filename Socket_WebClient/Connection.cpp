@@ -47,7 +47,7 @@ void Connection::start()
 	this->request = new HTTPRequest();
 	this->client_proxy->receive(request);
 
-	string host = ((HTTPRequest*)request)->getHost();
+	string host = ((HTTPRequest*)request)->getHostname();
 	if (this->blacklist != NULL && this->blacklist->isExist(host))
 	{
 		// send denied
