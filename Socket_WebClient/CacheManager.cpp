@@ -12,9 +12,12 @@ CacheManager::~CacheManager()
 	this->my_cache.clear();
 }
 
-void CacheManager::insert(const string &url, const HTTPResponse &response)
+void CacheManager::insert(const string &url, HTTPResponse *response)
 {
-	this->my_cache[url] = response;
+	if (response->isCache())
+	{
+		this->my_cache[url] = *response;
+	}
 }
 
 //void CacheManager::append(const string& url, const char* s, int len)

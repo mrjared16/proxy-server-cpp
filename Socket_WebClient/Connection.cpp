@@ -109,7 +109,8 @@ void Connection::start()
 		// slower than old version
 		// only sent to client when received all data
 		this->client_proxy->send(this->response);
-
+		this->cache_manager->insert(url, this->response);
+		
 		delete this->request;
 		delete this->response;
 		delete this->proxy_web;

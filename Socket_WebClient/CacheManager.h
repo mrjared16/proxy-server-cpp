@@ -13,7 +13,7 @@ public:
 
 	// void insert(const string &url, const vector<char> &response);
 	// void append(const string& url, const char* s, int len);
-	void insert(const string &url, const HTTPResponse &response);
+	void insert(const string &url, HTTPResponse *response);
 	void clear(const string& url);
 	bool isExist(const string &url);
 
