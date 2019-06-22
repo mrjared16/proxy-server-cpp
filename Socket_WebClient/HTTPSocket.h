@@ -11,5 +11,9 @@ public:
 	void receive(HTTPData* data);
 	void send(HTTPData* data);
 	virtual ~HTTPSocket();
+private:
+	int socket;
+	bool open;
+	bool close;
 };
 

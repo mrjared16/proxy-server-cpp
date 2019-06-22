@@ -9,11 +9,11 @@ HTTPRequest::HTTPRequest()
 HTTPRequest::~HTTPRequest()
 {
 }
-
+
 //GET http://www.abc.com/abc/ HTTP1.1
 //Tu first line (dong dau tien trong du lieu nhan) phan tich va lay ra
 //method, protocol, hostname, page va version
-void HTTPRequest::handle(string first_line)
+void HTTPRequest::handle()
 {
 	int start_method = 0;
 	int start_protocol = first_line.find(" ") + 1;
@@ -38,7 +38,7 @@ string HTTPRequest::getURL()
 
 //start line = GET /abc HTTP/1.0
 //start line = method + page + version
-string HTTPRequest::getStartLine()
+string HTTPRequest::getFirstLine()
 {
 	string start_line = this->method + " " + this->page + " " + this->version;
 	return start_line;

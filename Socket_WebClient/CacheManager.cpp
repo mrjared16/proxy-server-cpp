@@ -12,7 +12,7 @@ CacheManager::~CacheManager()
 	this->my_cache.clear();
 }
 
-void CacheManager::insert(const string &url, const HTTPResponse *response)
+void CacheManager::insert(const string &url, const HTTPResponse &response)
 {
 	this->my_cache[url] = response;
 }
@@ -30,16 +30,17 @@ void CacheManager::clear(const string& url)
 
 bool CacheManager::isExist(const string &url)
 {
-	if (this->my_cache[url].getHeaderLine().size() == 0)
+	if (this->my_cache[url].getFirstLine().size() == 0)
 		return false;
 	else
 		return true;
 }
 
-HTTPResponse* CacheManager::getResponse(const string &url)
+void CacheManager::getResponse(const string &url, HTTPResponse *&response)
 {
 	//return new vector<char>(this->my_cache[url]);
-	return &this->my_cache[url];
+	//return &this->my_cache[url];
+	response = &this->my_cache[url];
 }
 
 

@@ -25,41 +25,43 @@ public:
 private:
 	// string getHostnameFromRequest();
 
-	bool getRequestFromClient();
-	void getURLFromRequestHeader();
-	void URLProcessing();
+	//bool getRequestFromClient();
+	//void getURLFromRequestHeader();
+	// void URLProcessing();
 	
-	string getStandardizeHTTPRequestHeader();
+	// string getStandardizeHTTPRequestHeader();
 
 
 	sockaddr_in* getWebserverAddress();
 
-	void requestHeaderProcessing();
-	bool isSupport();
+	//void requestHeaderProcessing();
+	bool isSupport(HTTPRequest *req);
+	HTTPResponse* getDeniedResponse();
+	HTTPResponse* getCantResolveHostResponse();
 
-	bool sendRequestToWebServer();
-	bool transferResponseToClient();
+	// bool sendRequestToWebServer();
+	// bool transferResponseToClient();
 
-	bool sendDeniedResponse();
+	// bool sendDeniedResponse();
 	
 	// header
-	void standardizeHeader();
+	// void standardizeHeader();
 private:
 	CacheManager* cache_manager;
 	BlackList* blacklist;
-	HTTPSocket* client_proxy, *proxy_web;
 
+	HTTPSocket* client_proxy, *proxy_web;
 	HTTPData* request, * response;
 
 	//vector<char> request;
 	// string request;
-	string request_header;
+	/*string request_header;
 
 	string url;
 	
 	string protocol;
 	string hostname;
-	string page;
+	string page;*/
 private:
 	static const vector<string> support_method;
 	static const vector<string> support_protocol;

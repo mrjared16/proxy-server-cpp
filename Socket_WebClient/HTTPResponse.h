@@ -6,9 +6,11 @@ class HTTPResponse :
 public:
 	HTTPResponse();
 	virtual ~HTTPResponse();
-	void handle(string status_line);
+
+	// string getFirstLine();
+	void handle();
+
 	bool isCache();
-	string getStatusLine();
 private:
 	string protocol_version;
 	string status_code;

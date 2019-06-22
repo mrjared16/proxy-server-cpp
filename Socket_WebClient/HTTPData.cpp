@@ -11,6 +11,11 @@ HTTPData::~HTTPData()
 {
 }
 
+string HTTPData::getFirstLine()
+{
+	return this->first_line;
+}
+
 string HTTPData::getHeaders()
 {
 	return this->headers;
@@ -32,5 +37,7 @@ void HTTPData::init(string first_line, string headers, vector<char> body, int bo
 	this->headers = headers;
 	this->body = body;
 	this->body_length = body_length;
-	this->handle(this->first_line);
+	
+	// init status line/ start line
+	this->handle();
 }

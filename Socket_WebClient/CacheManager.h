@@ -12,12 +12,12 @@ public:
 	~CacheManager();
 
 	// void insert(const string &url, const vector<char> &response);
-	void insert(const string &url, const HTTPResponse *response);
 	// void append(const string& url, const char* s, int len);
+	void insert(const string &url, const HTTPResponse &response);
 	void clear(const string& url);
 	bool isExist(const string &url);
 
-	HTTPResponse* getResponse(const string &url);
+	void getResponse(const string &url, HTTPResponse *&response);
 
 private:
 	map<string, HTTPResponse> my_cache;

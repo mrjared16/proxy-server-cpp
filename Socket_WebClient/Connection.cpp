@@ -15,16 +15,19 @@ const vector<string> Connection::support_protocol = { "http://" };
 
 Connection::Connection(ConnectionManager* connect_mng)
 {
-	sockaddr_in client_address;
-	int size = sizeof(client_address);
 	this->cache_manager = connect_mng->getProxyServer()->getCacheManager();
 	this->blacklist = new BlackList();
 
 	//	this->client_proxy = ::accept(connect_mng->getProxyServer()->getProxyServerSocket(), (sockaddr*)& client_address, &size);
 
+	sockaddr_in client_address;
+	int size = sizeof(client_address);
 	int sock_client = ::accept(connect_mng->getProxyServer()->getProxyServerSocket(), (sockaddr*)& client_address, &size);
-	this->client_proxy = new HTTPSocket(sock_client);
 
+	this->client_proxy = new HTTPSocket(sock_client);
+	this->proxy_web = NULL;
+	this->request = NULL;
+	this->response = NULL;
 }
 
 Connection::~Connection()
@@ -47,33 +50,76 @@ void Connection::start()
 	this->request = new HTTPRequest();
 	this->client_proxy->receive(request);
 
+	// not support
+	if (!this->isSupport((HTTPRequest*)this->request))
+	{
+		cout << "Not support this request \n";
+		this->response = this->getDeniedResponse();
+		this->client_proxy->send(this->response);
+		
+		delete this->request;
+		delete this->response;
+
+		return;
+	}
+
+	// in blacklist
 	string host = ((HTTPRequest*)request)->getHostname();
 	if (this->blacklist != NULL && this->blacklist->isExist(host))
 	{
-		// send denied
 		cout << "Host in blacklist\n";
+		this->response = this->getDeniedResponse();
+		this->client_proxy->send(this->response);
+		
+		delete this->request;
+		delete this->response;
 		return;
 	}
-	if (this->cache_manager != NULL && this->cache_manager->isExist(host))
+
+	// in cache
+	string url = ((HTTPRequest*)request)->getURL();
+	if (this->cache_manager != NULL && this->cache_manager->isExist(url))
 	{
 		// get cache
+		this->cache_manager->getResponse(url, (HTTPResponse*&)this->response);
+		this->client_proxy->send(this->response);
+
+		delete this->request;
 	}
 	else {
+		// get response from web server
 		this->proxy_web = new HTTPSocket(host);
+		if (!this->proxy_web->isOpened())
+		{
+			cout << "Error connect to web server!\n";
+
+			this->response = this->getCantResolveHostResponse();
+			this->client_proxy->send(this->response);
+
+			delete this->request;
+			delete this->response;
+			delete this->proxy_web;
+			
+			return;
+		}
 		this->proxy_web->send(this->request);
 
 		this->response = new HTTPResponse();
 		this->proxy_web->receive(this->response);
 		// slower than old version
 		// only sent to client when received all data
+		this->client_proxy->send(this->response);
 
+		delete this->request;
+		delete this->response;
+		delete this->proxy_web;
 	}
-	this->client_proxy->send(this->response);
-	
-		// if (this->client_proxy == INVALID_SOCKET) {
-	// 	cout << "Error accept" << endl;
-	// 	return;
-	// }
+
+}
+// if (this->client_proxy == INVALID_SOCKET) {
+// 	cout << "Error accept" << endl;
+// 	return;
+// }
 // 	try {
 // 		// error or not support
 // 		if (!this->getRequestFromClient())
@@ -162,7 +208,7 @@ void Connection::start()
 // 	{
 // 		cout << "Error..\n";
 // 	}
-}
+//}
 //
 //bool Connection::getRequestFromClient()
 //{
@@ -243,15 +289,18 @@ void Connection::start()
 //	}
 //}
 //
-bool Connection::isSupport()
+
+bool Connection::isSupport(HTTPRequest* req)
 {
+	string start_line = req->getFirstLine();
+
 	bool check[3] = { false, false, false };
 	vector<string> support[3] = { support_method, support_protocol, support_version };
 	for (int i = 0; i < 3; i++)
 	{
 		for (string str : support[i])
 		{
-			if (request_header.find(str) != -1)
+			if (start_line.find(str) != -1)
 			{
 				check[i] = true;
 				break;
@@ -262,6 +311,15 @@ bool Connection::isSupport()
 	}
 
 	return true;
+}
+
+HTTPResponse* Connection::getDeniedResponse()
+{
+	HTTPResponse* result = new HTTPResponse();
+	vector<char> null_vector;
+	result->init("HTTP/1.0 403 Forbidden",
+		"Cache-Control: no-cache\r\nConnection: close\r\n", null_vector, 0);
+	return result;
 }
 //
 //void Connection::requestHeaderProcessing()
@@ -475,20 +533,20 @@ bool Connection::isSupport()
 //	result.replace(result.find(url), url.length(), page);
 //	return result;
 //}
-
-sockaddr_in* Connection::getWebserverAddress()
-{
-	struct hostent* hent;
-	if ((hent = gethostbyname(hostname.c_str())) == NULL)
-	{
-		cout << "Can't get IP\n";
-		return NULL;
-	}
-
-	sockaddr_in* result = new sockaddr_in;
-	result->sin_family = AF_INET;
-	memcpy(&result->sin_addr, hent->h_addr, hent->h_length);
-	result->sin_port = htons(HTTP_PORT);
-
-	return result;
-}
+//
+//sockaddr_in* Connection::getWebserverAddress()
+//{
+//	struct hostent* hent;
+//	if ((hent = gethostbyname(hostname.c_str())) == NULL)
+//	{
+//		cout << "Can't get IP\n";
+//		return NULL;
+//	}
+//
+//	sockaddr_in* result = new sockaddr_in;
+//	result->sin_family = AF_INET;
+//	memcpy(&result->sin_addr, hent->h_addr, hent->h_length);
+//	result->sin_port = htons(HTTP_PORT);
+//
+//	return result;
+//}

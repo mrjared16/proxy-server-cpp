@@ -6,9 +6,13 @@ class HTTPRequest :
 public:
 	HTTPRequest();
 	virtual ~HTTPRequest();
-	void handle(string first_line);
+
+	string getFirstLine();
+	void handle();
+
+	// string getStartLine();
+
 	string getURL();
-	string getStartLine();
 	string getHostname();
 private:
 	string method;
