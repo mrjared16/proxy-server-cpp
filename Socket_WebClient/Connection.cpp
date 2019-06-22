@@ -135,7 +135,7 @@ bool Connection::getRequestFromClient()
 		bool first = true;
 		int response_size = 0;
 
-		timeval timeout = { 3, 0 };
+		timeval timeout = { 1, 0 };
 		fd_set in_set;
 		while (true) {
 			FD_ZERO(&in_set);
@@ -437,7 +437,7 @@ string Connection::getStandardizeHTTPRequestHeader()
 	result.replace(result.find(url), url.length(), page);
 	return result;
 }
-
+#pragma warning (disable: 4996)
 sockaddr_in* Connection::getWebserverAddress()
 {
 	struct hostent* hent;

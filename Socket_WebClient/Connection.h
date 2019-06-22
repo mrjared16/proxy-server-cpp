@@ -3,7 +3,7 @@
 #include <afxsock.h>
 #include <vector>
 
-#define BUFFER_SIZE 1000
+#define BUFFER_SIZE 1000000
 #define TIMEOUT 6
 #define HTTP_PORT 80
 
