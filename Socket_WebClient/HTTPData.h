@@ -6,16 +6,15 @@ class HTTPData
 public:
 	HTTPData();
 	virtual ~HTTPData();
-	string getHeader();
-	string getBody();
+	string getHeaders();
+	vector<char> getBody();
 	int getBodyLength();
-	virtual string getHeaderLine();
-	void init(string header_line, string header, vector<char> body, int body_length);
-	virtual void handle(string header_line);
+	void init(string first_line, string headers, vector<char> body, int body_length);
+	virtual void handle(string first_line) = 0;
 protected:
-	int body_length;
-	string header_line;
-	string header;
+	string first_line;
+	string headers;
 	vector<char> body;
+	int body_length;
 };
 

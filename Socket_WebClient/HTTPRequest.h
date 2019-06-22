@@ -6,13 +6,14 @@ class HTTPRequest :
 public:
 	HTTPRequest();
 	virtual ~HTTPRequest();
-	void handle(string header_line);
-	bool isSuport();
+	void handle(string first_line);
 	string getURL();
+	string getStartLine();
+	string getHostname();
 private:
 	string method;
 	string protocol;
-	string host;
+	string hostname;
 	string page;
 	string version;
 };
