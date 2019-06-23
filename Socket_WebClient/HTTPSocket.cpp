@@ -67,7 +67,7 @@ bool HTTPSocket::Receive(HTTPData * data)
 	while (!is_header_end)
 	{
 		res = ::recv(this->socket, buffer, BUFFER_SIZE, 0);
-		if (res <= 0)
+		if (res < 0)
 		{
 			cout << "Error when send data\n";
 			this->is_close = true;
@@ -117,12 +117,14 @@ bool HTTPSocket::Receive(HTTPData * data)
 			header_buffer.erase(header_buffer.begin(), header_buffer.begin() + end_of_header + 4);
 			if (headers.find("chunked") == string::npos)
 			{
-				body_length = 0;
+				if (body_length == -1)
+					body_length = 0;
 			}
 			else
 			{
-				body_length = -1;
+				body_length == -1;
 			}
+
 		}
 	}
 	// remain data
@@ -147,11 +149,11 @@ bool HTTPSocket::Receive(HTTPData * data)
 		}
 		body_length = len;
 	}
-	else 
+	else
 	{
 		while (len < body_length)
 		{
-			res = ::recv(this->socket, buffer, body_length - len, 0);
+			res = ::recv(this->socket, buffer, BUFFER_SIZE, 0);
 
 
 			if (res < 0)
